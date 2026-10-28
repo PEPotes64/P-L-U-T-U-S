@@ -737,7 +737,7 @@ client.on('interactionCreate', async interaction => {
         return await interaction.editReply(`✅ ¡Fuente **"${nombreId}"** registrada con éxito!`);
     }
 
-    if (commandName === 'setbg') {
+        if (commandName === 'setbg') {
         if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
         await interaction.deferReply({ ephemeral: true });
 
@@ -747,13 +747,15 @@ client.on('interactionCreate', async interaction => {
         const precio = interaction.options.getInteger('precio') || null;
         const nivelMinimo = interaction.options.getInteger('nivel') || null;
 
-                await Background.findOneAndUpdate(
+        await Background.findOneAndUpdate(
             { guildId: interaction.guild.id, nombreId },
-            { fondoUrl: urlImagen, urlImagen, precio, nivelMinimo },
+            { guildId: interaction.guild.id, nombreId, fondoUrl: urlImagen, urlImagen, precio, nivelMinimo },
             { upsert: true, new: true }
         );
-        return await interaction.editReply(`✅ ¡Fondo **"${nombreId}"** guardado en Mongo!`);
+        return await interaction.editReply(`✅ ¡Fondo **"${nombreId}"** guardado en Mongo al centavo!`);
+            
     }
+    
 
     if (commandName === 'delbg') {
         if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
