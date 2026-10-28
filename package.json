@@ -1,0 +1,15 @@
+{
+  "name": "plutus-bot",
+  "version": "1.0.0",
+  "description": "Bot de tesorería, Canvas y tienda de cosméticos",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.52",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.3.1"
+  }
+}
