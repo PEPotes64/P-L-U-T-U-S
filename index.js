@@ -68,9 +68,18 @@ const client = new Client({
 // TU ID EXCLUSIVA DE PEPO
 const PEPO_ID = '1259006426978713620';
 
-mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI)
-    .then(() => console.log('Base de datos conectada al 100 en Plutus > :v'))
-    .catch(err => console.error('Puchica fallo la base de datos:', err));
+mongoose.connect(process.env.MONGO_URI)
+    .then(async () => {
+        console.log('✅ Conectado a MongoDB Atlas');
+        // Esto borra el índice maldito que causa el error de duplicados
+        try {
+            await mongoose.connection.collection('backgrounds').dropIndex('guildId_1');
+            console.log('🗑️ Índice duplicado guildId_1 eliminado con éxito de MongoDB');
+        } catch (e) {
+            console.log('ℹ️ El índice guildId_1 ya no existe o ya fue limpiado.');
+        }
+    })
+    .catch(err => console.error('❌ Error al conectar a MongoDB:', err));
 
 // --- COMANDOS SLASH DE PLUTUS (SOLO ARTE, TIENDA COSMÉTICA Y PERFIL) ---
 const dataComprar = { name: 'comprar', description: 'Abre la tienda de cosméticos de Plutus gastando tu XP' };
