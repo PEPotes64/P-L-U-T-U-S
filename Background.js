@@ -7,6 +7,6 @@ const backgroundSchema = new mongoose.Schema({
     urlImagen: { type: String, required: true },
     precio: { type: Number, default: null },
     nivelMinimo: { type: Number, default: null }
-});
+}, { strict: false });
 
 module.exports = mongoose.models.Background || mongoose.model('Background', backgroundSchema);
