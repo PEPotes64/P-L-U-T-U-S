@@ -159,6 +159,12 @@ const dataTabla = {
     ]
 };
 
+const dataLimpiar = {
+    name: 'limpiar',
+    description: 'Borra todas las fuentes y tablas de Mongo (Exclusivo Pepo)'
+    ]
+};
+
 client.once('ready', async () => {
     console.log(`Bot Plutus prendido como ${client.user.tag} > :v`);
 
@@ -181,7 +187,7 @@ client.once('ready', async () => {
     try {
         const comandosTotales = [
             dataComprar, dataPerfil, dataCritica, dataSetBg, 
-            dataDelBg, dataSetFont, dataSetPack, dataTabla
+            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataLimpiar
         ];
 
         for (const [guildId, guild] of client.guilds.cache) {
@@ -801,6 +807,20 @@ client.on('interactionCreate', async interaction => {
         );
         return await interaction.editReply(`✅ ¡Tabla **"${nombreId}"** guardada con éxito!`);
     }
+
+        if (commandName === 'limpiar') {
+        if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            await Font.deleteMany({});
+            await Tabla.deleteMany({});
+            return await interaction.editReply('🧹 ¡Listo Pepo! Se borraron todas las fuentes y las tablas de MongoDB. Quedaron en ceros alv Bv :v');
+        } catch (err) {
+            console.error("Error al limpiar mongo:", err);
+            return await interaction.editReply('❌ Fallo la limpieza alv.');
+     }
+    
 });
 
 // --- MANEJADOR DE SELECCIONES DE PLUTUS (TIENDA Y ARMARIO) ---
