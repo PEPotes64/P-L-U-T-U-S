@@ -968,10 +968,12 @@ client.on('interactionCreate', async interaction => {
             return await interaction.editReply('❌ Fallo la limpieza alv.');
         }
 
-            if (commandName === 'setauto') {
+                if (commandName === 'setauto') {
         if (interaction.user.id !== PEPO_ID) {
             return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
         }
+        
+        // Deferimos la respuesta al instante para que Discord no marque timeout
         await interaction.deferReply({ ephemeral: true });
 
         const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
@@ -1009,7 +1011,7 @@ client.on('interactionCreate', async interaction => {
             console.error("Error en /setauto:", err);
             return await interaction.editReply(`❌ Error al guardar el menú: \`${err.message}\``);
         }
-    }
+                }
 
     if (commandName === 'autorol') {
         try {
