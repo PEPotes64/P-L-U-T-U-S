@@ -255,10 +255,7 @@ const dataSetAuto = {
 
 const dataAutorol = {
     name: 'autorol',
-    description: 'Despliega un menú de autoroles en tu posesión',
-    options: [
-        { name: 'nombre', type: ApplicationCommandOptionType.String, description: 'Nombre del menú de autoroles a desplegar', required: true }
-    ]
+    description: 'Despliega el directorio de menús de autoroles'
 };
 
 const dataLimpiar = {
