@@ -1508,9 +1508,7 @@ client.on('interactionCreate', async interaction => {
                 await member.roles.add(roleIdSeleccionado);
                 return await interaction.reply({ content: `✅ ¡Te has equipado con éxito el rol <@&${roleIdSeleccionado}>! ${menuData.precio > 0 ? `(Se te descontaron ${menuData.precio} XP)` : ''}`, ephemeral: true });
             }
-        }
         
-
         if (customId === 'equipar_tabla_menu') {
             await interaction.deferReply({ ephemeral: true });
             const tablaId = values[0].replace('equipar_tabla_', '').trim();
