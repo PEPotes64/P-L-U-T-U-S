@@ -836,20 +836,28 @@ client.on('interactionCreate', async interaction => {
             if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
             const xpTotalActual = obtenerXpTotal(userXpData);
 
-            if (customId.startsWith('exec_comprar_bg_')) {
-                const bgId = customId.replace('exec_comprar_bg_', '');
-                const bgObj = await Background.findOne({ guildId, nombreId: bgId });
-                if (!bgObj) return await interaction.reply({ content: '❌ El fondo ya no existe.', ephemeral: true });
-                if (bgObj.nivelMinimo && userXpData.level < bgObj.nivelMinimo) return await interaction.reply({ content: `❌ Requiere Nivel ${bgObj.nivelMinimo}.`, ephemeral: true });
-                if (xpTotalActual < bgObj.precio) return await interaction.reply({ content: `❌ Necesitás ${bgObj.precio} XP.`, ephemeral: true });
+                        if (customId.startsWith('exec_comprar_pack_')) {
+                const packId = customId.replace('exec_comprar_pack_', '');
+                const packObj = await Pack.findOne({ guildId, nombreId: packId });
+                if (!packObj) return await interaction.reply({ content: '❌ El pack ya no existe.', ephemeral: true });
+                if (packObj.nivelMinimo && userXpData.level < packObj.nivelMinimo) return await interaction.reply({ content: `❌ Requiere Nivel ${packObj.nivelMinimo}.`, ephemeral: true });
+                if (xpTotalActual < packObj.precio) return await interaction.reply({ content: `❌ Necesitás ${packObj.precio} XP.`, ephemeral: true });
 
-                recalcularProgreso(userXpData, xpTotalActual - bgObj.precio);
+                recalcularProgreso(userXpData, xpTotalActual - packObj.precio);
                 if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
-                if (!userXpData.cartelesComprados.includes(bgId)) userXpData.cartelesComprados.push(bgId);
-                userXpData.cartelEquipado = bgId;
+                if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
+                if (!userXpData.packsComprados) userXpData.packsComprados = [];
+
+                if (!userXpData.cartelesComprados.includes(packObj.fondoNombreId)) userXpData.cartelesComprados.push(packObj.fondoNombreId);
+                if (!userXpData.fuentesCompradas.includes(packObj.fuenteNombreId)) userXpData.fuentesCompradas.push(packObj.fuenteNombreId);
+                if (!userXpData.packsComprados.includes(packId)) userXpData.packsComprados.push(packId);
+
+                userXpData.cartelEquipado = packObj.fondoNombreId;
+                userXpData.fuenteEquipada = packObj.fuenteNombreId;
                 await userXpData.save();
-                return await interaction.update({ content: `🖼️ ¡Compraste y equipaste el fondo **${bgId}** con éxito alv!`, embeds: [], components: [] });
-            }
+                return await interaction.update({ content: `📦 ¡Compraste y equipaste el pack combo **${packId}** con éxito alv!`, embeds: [], components: [] });
+              }
+            
             return;
         }
 
@@ -868,47 +876,66 @@ client.on('interactionCreate', async interaction => {
             const opcion = values[0];
 
             // Previsualización de Fondos con Canvas
-            if (opcion.startsWith('comprar_bg_')) {
-                const bgId = opcion.replace('comprar_bg_', '');
-                const bgObj = await Background.findOne({ guildId, nombreId: bgId });
-                if (!bgObj) return await interaction.reply({ content: '❌ El fondo ya no existe alv.', ephemeral: true });
+
+                        if (opcion.startsWith('comprar_pack_')) {
+                const packId = opcion.replace('comprar_pack_', '');
+                const packObj = await Pack.findOne({ guildId, nombreId: packId });
+                if (!packObj) return await interaction.reply({ content: '❌ El pack ya no existe alv.', ephemeral: true });
+
+                // Buscamos el fondo del pack para usarlo de base en el canvas
+                const bgObj = await Background.findOne({ guildId, nombreId: packObj.fondoNombreId });
+                const fontName = packObj.fuenteNombreId || 'sans-serif';
 
                 const canvas = createCanvas(1000, 600);
                 const ctx = canvas.getContext('2d');
+                
                 try {
-                    const resBg = await fetch(bgObj.fondoUrl || bgObj.urlImagen);
-                    if (resBg.ok) {
-                        const img = await loadImage(Buffer.from(await resBg.arrayBuffer()));
-                        ctx.drawImage(img, 0, 0, 1000, 600);
+                    if (bgObj) {
+                        const resBg = await fetch(bgObj.fondoUrl || bgObj.urlImagen);
+                        if (resBg.ok) {
+                            const img = await loadImage(Buffer.from(await resBg.arrayBuffer()));
+                            ctx.drawImage(img, 0, 0, 1000, 600);
+                        }
+                    } else {
+                        ctx.fillStyle = '#1a1035';
+                        ctx.fillRect(0, 0, 1000, 600);
                     }
                 } catch (e) {
                     ctx.fillStyle = '#1a1035';
                     ctx.fillRect(0, 0, 1000, 600);
                 }
 
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.fillRect(50, 50, 900, 100);
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 36px sans-serif';
-                ctx.fillText(`🖼️ VISTA PREVIA: ${bgId.toUpperCase()}`, 80, 110);
+                // Panel decorativo con la fuente del pack si está registrada
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.beginPath();
+                ctx.roundRect(100, 200, 800, 200, 20);
+                ctx.fill();
 
-                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_${bgId}.png` });
+                ctx.fillStyle = '#FFD700';
+                ctx.font = `bold 38px "${fontName}", sans-serif`;
+                ctx.fillText(`📦 PACK COMBO: ${packId.toUpperCase()}`, 140, 280);
+
+                ctx.fillStyle = '#E2E2E8';
+                ctx.font = `22px "${fontName}", sans-serif`;
+                ctx.fillText(`Fondo: ${packObj.fondoNombreId} | Fuente: ${packObj.fuenteNombreId}`, 140, 330);
+
+                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_pack_${packId}.png` });
                 
                 const embedPreview = new EmbedBuilder()
                     .setColor('#FFD700')
-                    .setTitle(`🖼️ Fondo: ${bgId}`)
-                    .setDescription(`Precio: **${bgObj.precio} XP**\nNivel Mínimo Req: **${bgObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
-                    .setImage(`attachment://preview_${bgId}.png`);
+                    .setTitle(`📦 Pack Combo: ${packId}`)
+                    .setDescription(`Incluye:\n- Fondo: \`${packObj.fondoNombreId}\`\n- Fuente: \`${packObj.fuenteNombreId}\`\n\nPrecio: **${packObj.precio} XP**\nNivel Mínimo Req: **${packObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
+                    .setImage(`attachment://preview_pack_${packId}.png`);
 
                 const botonComprar = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`exec_comprar_bg_${bgId}`)
-                        .setLabel('🛒 Confirmar Compra')
+                        .setCustomId(`exec_comprar_pack_${packId}`)
+                        .setLabel('🛒 Confirmar Compra de Pack')
                         .setStyle(ButtonStyle.Success)
                 );
 
                 return await interaction.reply({ embeds: [embedPreview], files: [attachment], components: [botonComprar], ephemeral: true });
-            }
+             }
 
             // Compra directa para fuentes, packs y tablas por ahora
             if (opcion.startsWith('comprar_font_')) {
