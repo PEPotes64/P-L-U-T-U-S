@@ -1194,6 +1194,81 @@ client.on('interactionCreate', async interaction => {
             await userXpData.save();
             return await interaction.editReply({ content: `📦 ¡Te equipaste el pack combo **"${packId}"** con éxito!` });
         }
+                if (interaction.isButton()) {
+        const { customId } = interaction;
+        if (customId === 'cancelar_compra') {
+            return await interaction.update({ content: '❌ Compra cancelada alv.', embeds: [], files: [], components: [] });
+        }
+
+        if (customId.startsWith('exec_comprar_')) {
+            await interaction.deferUpdate();
+            const partes = customId.replace('exec_comprar_', '').split('_');
+            const tipo = partes[0]; // bg, font, pack, tabla
+            const itemId = partes.slice(1).join('_');
+            const userId = interaction.user.id;
+            const guildId = interaction.guild.id;
+
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
+            const xpTotalActual = obtenerXpTotal(userXpData);
+
+            if (tipo === 'bg') {
+                const bgObj = await Background.findOne({ guildId, nombreId: itemId });
+                if (!bgObj || xpTotalActual < bgObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el fondo ya no existe.', ephemeral: true });
+
+                recalcularProgreso(userXpData, xpTotalActual - bgObj.precio);
+                if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
+                if (!userXpData.cartelesComprados.includes(itemId)) userXpData.cartelesComprados.push(itemId);
+                userXpData.cartelEquipado = itemId;
+                await userXpData.save();
+                return await interaction.editReply({ content: `🖼️ ¡Compra exitosa! Te compraste y equipaste el fondo **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
+            }
+
+            if (tipo === 'font') {
+                const fontObj = await Font.findOne({ guildId, nombreId: itemId });
+                if (!fontObj || xpTotalActual < fontObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la fuente ya no existe.', ephemeral: true });
+
+                recalcularProgreso(userXpData, xpTotalActual - fontObj.precio);
+                if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
+                if (!userXpData.fuentesCompradas.includes(itemId)) userXpData.fuentesCompradas.push(itemId);
+                userXpData.fuenteEquipada = itemId;
+                await userXpData.save();
+                return await interaction.editReply({ content: `🔤 ¡Compra exitosa! Te compraste y equipaste la fuente **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
+            }
+
+            if (tipo === 'pack') {
+                const packObj = await Pack.findOne({ guildId, nombreId: itemId });
+                if (!packObj || xpTotalActual < packObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el pack ya no existe.', ephemeral: true });
+
+                recalcularProgreso(userXpData, xpTotalActual - packObj.precio);
+                if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
+                if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
+                if (!userXpData.packsComprados) userXpData.packsComprados = [];
+
+                if (!userXpData.cartelesComprados.includes(packObj.fondoNombreId)) userXpData.cartelesComprados.push(packObj.fondoNombreId);
+                if (!userXpData.fuentesCompradas.includes(packObj.fuenteNombreId)) userXpData.fuentesCompradas.push(packObj.fuenteNombreId);
+                if (!userXpData.packsComprados.includes(itemId)) userXpData.packsComprados.push(itemId);
+
+                userXpData.cartelEquipado = packObj.fondoNombreId;
+                userXpData.fuenteEquipada = packObj.fuenteNombreId;
+                await userXpData.save();
+                return await interaction.editReply({ content: `📦 ¡Compra exitosa! Te compraste y equipaste el pack combo **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
+            }
+
+            if (tipo === 'tabla') {
+                const tablaObj = await Tabla.findOne({ guildId, nombreId: itemId });
+                if (!tablaObj || xpTotalActual < tablaObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la tabla ya no existe.', ephemeral: true });
+
+                recalcularProgreso(userXpData, xpTotalActual - tablaObj.precio);
+                if (!userXpData.tablasCompradas) userXpData.tablasCompradas = [];
+                if (!userXpData.tablasCompradas.includes(itemId)) userXpData.tablasCompradas.push(itemId);
+                userXpData.tablaEquipada = itemId;
+                await userXpData.save();
+                return await interaction.editReply({ content: `🪞 ¡Compra exitosa! Te compraste y equipaste la tabla **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
+            }
+        }
+        }
+            
     } catch (err) {
         console.error("Error en interacciones del bot Plutus:", err);
     }
