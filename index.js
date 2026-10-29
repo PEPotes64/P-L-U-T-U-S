@@ -227,10 +227,10 @@ const dataSetAuto = {
     description: 'Crea un menú de autoroles de hasta 10 roles (Exclusivo Pepo)',
     options: [
         { name: 'nombre', type: ApplicationCommandOptionType.String, description: 'Nombre identificador único del menú', required: true },
+        { name: 'rol1', type: ApplicationCommandOptionType.Role, description: 'Primer rol obligatorio del menú', required: true },
         { name: 'precio', type: ApplicationCommandOptionType.Integer, description: 'Costo en XP para obtenerlos', required: false },
         { name: 'nivel', type: ApplicationCommandOptionType.Integer, description: 'Nivel mínimo requerido', required: false },
         { name: 'pana', type: ApplicationCommandOptionType.User, description: 'Usuario exclusivo que puede usar este menú', required: false },
-        { name: 'rol1', type: ApplicationCommandOptionType.Role, description: 'Rol 1', required: true },
         { name: 'rol2', type: ApplicationCommandOptionType.Role, description: 'Rol 2', required: false },
         { name: 'rol3', type: ApplicationCommandOptionType.Role, description: 'Rol 3', required: false },
         { name: 'rol4', type: ApplicationCommandOptionType.Role, description: 'Rol 4', required: false },
