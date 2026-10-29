@@ -222,6 +222,30 @@ const dataTabla = {
     ]
 };
 
+const { ApplicationCommandOptionType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+
+const dataSetAuto = {
+    name: 'setauto',
+    description: 'Crea un menú de autoroles público o exclusivo (Exclusivo Pepo)',
+    options: [
+        { name: 'nombre', type: ApplicationCommandOptionType.String, description: 'Nombre identificador único del menú', required: true },
+        { name: 'rol1', type: ApplicationCommandOptionType.Role, description: 'Primer rol del menú', required: true },
+        { name: 'rol2', type: ApplicationCommandOptionType.Role, description: 'Segundo rol del menú', required: false },
+        { name: 'rol3', type: ApplicationCommandOptionType.Role, description: 'Tercer rol del menú', required: false },
+        { name: 'precio', type: ApplicationCommandOptionType.Integer, description: 'Costo en XP para obtenerlos', required: false },
+        { name: 'nivel', type: ApplicationCommandOptionType.Integer, description: 'Nivel mínimo requerido', required: false },
+        { name: 'pana', type: ApplicationCommandOptionType.User, description: 'Usuario exclusivo que puede usar este menú', required: false }
+    ]
+};
+
+const dataAutorol = {
+    name: 'autorol',
+    description: 'Despliega un menú de autoroles en tu posesión',
+    options: [
+        { name: 'nombre', type: ApplicationCommandOptionType.String, description: 'Nombre del menú de autoroles a desplegar', required: true }
+    ]
+};
+
 const dataLimpiar = {
     name: 'limpiar',
     description: 'Borra todas las fuentes y tablas de Mongo (Exclusivo Pepo)'
@@ -249,7 +273,7 @@ client.once('ready', async () => {
     try {
         const comandosTotales = [
             dataComprar, dataPerfil, dataCritica, dataSetBg, 
-            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataLimpiar
+            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar
         ];
 
         for (const [guildId, guild] of client.guilds.cache) {
@@ -1017,6 +1041,94 @@ client.on('interactionCreate', async interaction => {
         );
         return await interaction.editReply(`✅ ¡Tabla **"${nombreId}"** guardada con éxito!`);
     }
+
+    // Lógica de ejecución:
+if (commandName === 'setauto') {
+    // Validar que seas tú (puedes poner tu ID de usuario de Discord aquí)
+    if (interaction.user.id !== 'TU_ID_DE_DISCORD_AQUI') {
+        return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
+    }
+
+    const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
+    const precio = interaction.options.getInteger('precio') || 0;
+    const nivelMinimo = interaction.options.getInteger('nivel') || 1;
+    const panaUser = interaction.options.getUser('pana');
+    const propietarioId = panaUser ? panaUser.id : null;
+
+    // Recolectar roles proporcionados
+    const rolesArray = [];
+    for (let i = 1; i <= 3; i++) {
+        const rol = interaction.options.getRole(`rol${i}`);
+        if (rol) {
+            rolesArray.push({
+                roleId: rol.id,
+                label: rol.name,
+                description: `Obtener el rol ${rol.name}`
+            });
+        }
+    }
+
+    if (rolesArray.length === 0) {
+        return await interaction.reply({ content: '❌ Debes agregar al menos un rol al menú.', ephemeral: true });
+    }
+
+    try {
+        await AutoRoleMenu.findOneAndUpdate(
+            { guildId: interaction.guild.id, nombreId },
+            { guildId: interaction.guild.id, nombreId, roles: rolesArray, precio, nivelMinimo, propietarioId },
+            { upsert: true, new: true }
+        );
+
+        const tipoTexto = propietarioId ? `🔒 Exclusivo para <@${propietarioId}>` : `🌐 Público (Para todos)`;
+        return await interaction.reply({ 
+            content: `✅ ¡Menú de autorol \`${nombreId}\` creado con éxito!\nTipo: ${tipoTexto}\nRoles incluidos: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`, 
+            ephemeral: true 
+        });
+    } catch (err) {
+        console.error("Error en /setauto:", err);
+        return await interaction.reply({ content: `❌ Error al guardar el menú: \`${err.message}\``, ephemeral: true });
+    }
+}
+
+    // Lógica de ejecución:
+if (commandName === 'autorol') {
+    const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
+    const guildId = interaction.guild.id;
+    const userId = interaction.user.id;
+
+    const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
+    if (!menuData) {
+        return await interaction.reply({ content: `❌ No existe ningún menú de autorol con el nombre \`${nombreId}\` alv.`, ephemeral: true });
+    }
+
+    // Validar si es exclusivo
+    if (menuData.propietarioId && menuData.propietarioId !== userId) {
+        return await interaction.reply({ content: `❌ Este menú de autoroles es **exclusivo** y pertenece a otro usuario alv. No puedes desplegarlo.`, ephemeral: true });
+    }
+
+    // Construir el Select Menu
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId(`autorol_select_${nombreId}`)
+        .setPlaceholder(`📂 Selecciona un rol del menú: ${nombreId}`)
+        .addOptions(
+            menuData.roles.map(r => ({
+                label: r.label,
+                value: r.roleId,
+                description: `Reclamar rol ${r.label}`,
+                emoji: '✨'
+            }))
+        );
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
+
+    const embed = new EmbedBuilder()
+        .setColor('#FFD700')
+        .setTitle(`✨ Menú de Autoroles: ${nombreId.toUpperCase()}`)
+        .setDescription(`Usa el menú desplegable de abajo para equiparte/obtener el rol.\n\n• **Precio:** ${menuData.precio > 0 ? `${menuData.precio} XP` : 'Gratis'}\n• **Nivel Mínimo:** ${menuData.nivelMinimo}`)
+        .setFooter({ text: 'Plutus • Sistema de Autoroles', iconURL: client.user.displayAvatarURL() });
+
+    return await interaction.reply({ embeds: [embed], components: [row] });
+}
 
     if (commandName === 'limpiar') {
         if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
