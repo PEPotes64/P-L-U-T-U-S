@@ -576,14 +576,14 @@ async function generarTarjetaCritica({
     return canvas.toBuffer('image/png');
 }
 
-  // --- MANEJADOR DE COMANDOS SLASH ---
+// --- MANEJADOR DE COMANDOS SLASH ---
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
     const { commandName } = interaction;
 
-    if (commandName === 'perfil') {
-        try {
+    try {
+        if (commandName === 'perfil') {
             await interaction.deferReply({ ephemeral: true });
             const userId = interaction.user.id;
             const guildId = interaction.guild.id;
@@ -706,14 +706,9 @@ client.on('interactionCreate', async interaction => {
             }
             
             return await interaction.editReply({ embeds: [perfilEmbed], files: [attachment], components: componentes });
-        } catch (err) {
-            console.error("Error en /perfil:", err);
-            if (interaction.deferred) await interaction.editReply(`❌ Error al abrir perfil: \`${err.message}\``);
-        }
         }
 
         if (commandName === 'critica') {
-        try {
             await interaction.deferReply();
 
             const sub = interaction.options.getSubcommand();
@@ -794,279 +789,223 @@ client.on('interactionCreate', async interaction => {
 
             const attachment = new AttachmentBuilder(bufferTarjeta, { name: `evaluacion_${artistaUser.username}.png` });
             return await interaction.editReply({ files: [attachment] });
-
-        } catch (err) {
-            console.error("Error en /critica:", err);
-            if (interaction.deferred) await interaction.editReply(`❌ Error al generar la crítica: \`${err.message}\``);
-        }
-    }
-    
-    if (commandName === 'comprar') {
-        await interaction.deferReply();
-
-        const fondosTienda = await Background.find({ guildId: interaction.guild.id, precio: { $ne: null } });
-        const fuentesTienda = await Font.find({ guildId: interaction.guild.id, precio: { $ne: null } });
-        const packsTienda = await Pack.find({ guildId: interaction.guild.id, precio: { $ne: null } });
-        const tablasTienda = await Tabla.find({ guildId: interaction.guild.id, precio: { $ne: null } });
-        
-        const tiendaEmbed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
-            .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs y tablas exclusivas.');
-
-        const opcionesMenu = [];
-
-        fondosTienda.forEach(f => {
-            tiendaEmbed.addFields({
-                name: `🖼️ Fondo: ${f.nombreId} (${f.precio} XP)`,
-                value: `Nivel Mínimo: ${f.nivelMinimo ?? 'Ninguno'}`
-            });
-            opcionesMenu.push({
-                label: `Fondo: ${f.nombreId} (${f.precio} XP)`,
-                description: `Req. Nivel ${f.nivelMinimo ?? 1}`,
-                value: `comprar_bg_${f.nombreId}`,
-                emoji: '🖼️'
-            });
-        });
-
-        fuentesTienda.forEach(fu => {
-            tiendaEmbed.addFields({
-                name: `🔤 Fuente: ${fu.nombreId} (${fu.precio} XP)`,
-                value: `Nivel Mínimo: ${fu.nivelMinimo ?? 'Ninguno'}`
-            });
-            opcionesMenu.push({
-                label: `Fuente: ${fu.nombreId} (${fu.precio} XP)`,
-                description: `Req. Nivel ${fu.nivelMinimo ?? 1}`,
-                value: `comprar_font_${fu.nombreId}`,
-                emoji: '🔤'
-            });
-        });
-
-        packsTienda.forEach(p => {
-            tiendaEmbed.addFields({
-                name: `📦 Pack: ${p.nombreId} (${p.precio} XP)`,
-                value: `Nivel Mínimo: ${p.nivelMinimo ?? 'Ninguno'}`
-            });
-            opcionesMenu.push({
-                label: `Pack: ${p.nombreId} (${p.precio} XP)`,
-                description: `Req. Nivel ${p.nivelMinimo ?? 1}`,
-                value: `comprar_pack_${p.nombreId}`,
-                emoji: '📦'
-            });
-        });
-
-        tablasTienda.forEach(t => {
-            tiendaEmbed.addFields({
-                name: `🪞 Tabla: ${t.nombreId} (${t.precio} XP)`,
-                value: `Nivel Mínimo: ${t.nivelMinimo ?? 'Ninguno'}`
-            });
-            opcionesMenu.push({
-                label: `Tabla: ${t.nombreId} (${t.precio} XP)`,
-                description: `Req. Nivel ${t.nivelMinimo ?? 1}`,
-                value: `comprar_tabla_${t.nombreId}`,
-                emoji: '🪞'
-            });
-        });
-
-        if (opcionesMenu.length === 0) {
-            tiendaEmbed.addFields({ name: '⚠️ Tienda Vacía', value: 'Pepo todavía no ha subido cosméticos a la tienda.' });
-            return await interaction.editReply({ embeds: [tiendaEmbed] });
         }
 
-        const menuSelec = new StringSelectMenuBuilder()
-            .setCustomId('tienda_menu')
-            .setPlaceholder('Elegí un cosmético para comprar...')
-            .addOptions(opcionesMenu);
+        if (commandName === 'comprar') {
+            await interaction.deferReply();
 
-        const fila = new ActionRowBuilder().addComponents(menuSelec);
-        await interaction.editReply({ embeds: [tiendaEmbed], components: [fila] });
-        return;
-                     }
-                                            if (commandName === 'setpack') {
-        if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-        await interaction.deferReply({ ephemeral: true });
+            const fondosTienda = await Background.find({ guildId: interaction.guild.id, precio: { $ne: null } });
+            const fuentesTienda = await Font.find({ guildId: interaction.guild.id, precio: { $ne: null } });
+            const packsTienda = await Pack.find({ guildId: interaction.guild.id, precio: { $ne: null } });
+            const tablasTienda = await Tabla.find({ guildId: interaction.guild.id, precio: { $ne: null } });
+            
+            const tiendaEmbed = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
+                .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs y tablas exclusivas.');
 
-        const nombrePack = interaction.options.getString('nombre_pack').toLowerCase().trim();
-        const fondoId = interaction.options.getString('fondo_id').toLowerCase().trim();
-        const fuenteId = interaction.options.getString('fuente_id').toLowerCase().trim();
-        const precio = interaction.options.getInteger('precio');
-        const nivel = interaction.options.getInteger('nivel');
+            const opcionesMenu = [];
 
-        await Pack.findOneAndUpdate(
-            { guildId: interaction.guild.id, nombreId: nombrePack },
-            { fondoNombreId: fondoId, fuenteNombreId: fuenteId, precio: precio ?? null, nivelMinimo: nivel ?? null },
-            { upsert: true, new: true }
-        );
-        return await interaction.editReply(`📦 ¡Pack Combo **"${nombrePack}"** creado con éxito!`);
-    }
-
-    if (commandName === 'setfont') {
-        if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-        await interaction.deferReply({ ephemeral: true });
-
-        const nombreId = interaction.options.getString('nombre_id').toLowerCase().trim();
-        const archivo = interaction.options.getAttachment('archivo');
-        const precio = interaction.options.getInteger('precio');
-        const nivel = interaction.options.getInteger('nivel');
-
-        const response = await fetch(archivo.url);
-        const buffer = Buffer.from(await response.arrayBuffer());
-        GlobalFonts.register(buffer, nombreId);
-
-        await Font.findOneAndUpdate(
-            { guildId: interaction.guild.id, nombreId },
-            { fontUrl: archivo.url, precio: precio ?? null, nivelMinimo: nivel ?? null },
-            { upsert: true, new: true }
-        );
-        return await interaction.editReply(`✅ ¡Fuente **"${nombreId}"** registrada con éxito!`);
-    }
-
-    if (commandName === 'setbg') {
-        if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-        await interaction.deferReply({ ephemeral: true });
-
-        const nombreInput = interaction.options.getString('nombre') || interaction.options.getString('nombre_id');
-        const nombreId = nombreInput.toLowerCase().trim();
-        const urlImagen = interaction.options.getAttachment('imagen').url;
-        const precio = interaction.options.getInteger('precio') || null;
-        const nivelMinimo = interaction.options.getInteger('nivel') || null;
-
-        await Background.findOneAndUpdate(
-            { guildId: interaction.guild.id, nombreId },
-            { guildId: interaction.guild.id, nombreId, fondoUrl: urlImagen, urlImagen, precio, nivelMinimo },
-            { upsert: true, new: true }
-        );
-        return await interaction.editReply(`✅ ¡Fondo **"${nombreId}"** guardado en Mongo al centavo!`);
-    }
-
-    if (commandName === 'delbg') {
-        if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-        await interaction.deferReply({ ephemeral: true });
-
-        const nombreId = interaction.options.getString('nombre_id').toLowerCase().trim();
-        await Background.findOneAndDelete({ guildId: interaction.guild.id, nombreId: new RegExp(`^${nombreId}$`, 'i') });
-        return await interaction.editReply(`🗑️ ¡Fondo **"${nombreId}"** eliminado!`);
-    }
-
-    if (commandName === 'settabla') {
-        if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-        await interaction.deferReply({ ephemeral: true });
-
-        const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
-        const urlImagen = interaction.options.getAttachment('imagen').url;
-        const precio = interaction.options.getInteger('precio') || null;
-        const nivelMinimo = interaction.options.getInteger('nivel') || null;
-
-        await Tabla.findOneAndUpdate(
-            { guildId: interaction.guild.id, nombreId },
-            { urlImagen, precio, nivelMinimo },
-            { upsert: true, new: true }
-        );
-        return await interaction.editReply(`✅ ¡Tabla **"${nombreId}"** guardada con éxito!`);
-    }
-
-    if (commandName === 'limpiar') {
-        if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-        await interaction.deferReply({ ephemeral: true });
-
-        try {
-            await Font.deleteMany({});
-            await Tabla.deleteMany({});
-            return await interaction.editReply('🧹 ¡Listo Pepo! Se borraron todas las fuentes y las tablas de MongoDB. Quedaron en ceros alv Bv :v');
-        } catch (err) {
-            console.error("Error al limpiar mongo:", err);
-            return await interaction.editReply('❌ Fallo la limpieza alv.');
-        }
-
-                    if (commandName === 'setauto') {
-        if (interaction.user.id !== PEPO_ID) {
-            return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
-        }
-        
-        // <--- AQUÍ FALTABA CERRAR LA LLAVE DEL IF O ASEGURAR QUE SIGA DIRECTO:
-        await interaction.deferReply({ ephemeral: true });
-
-        const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
-        const precio = interaction.options.getInteger('precio') || 0;
-        const nivelMinimo = interaction.options.getInteger('nivel') || 1;
-        const panaUser = interaction.options.getUser('pana');
-        const propietarioId = panaUser ? panaUser.id : null;
-
-        const rolesArray = [];
-        for (let i = 1; i <= 10; i++) {
-            const rol = interaction.options.getRole(`rol${i}`);
-            if (rol) {
-                rolesArray.push({
-                    roleId: rol.id,
-                    label: rol.name,
-                    description: `Obtener el rol ${rol.name}`
+            fondosTienda.forEach(f => {
+                tiendaEmbed.addFields({
+                    name: `🖼️ Fondo: ${f.nombreId} (${f.precio} XP)`,
+                    value: `Nivel Mínimo: ${f.nivelMinimo ?? 'Ninguno'}`
                 });
+                opcionesMenu.push({
+                    label: `Fondo: ${f.nombreId} (${f.precio} XP)`,
+                    description: `Req. Nivel ${f.nivelMinimo ?? 1}`,
+                    value: `comprar_bg_${f.nombreId}`,
+                    emoji: '🖼️'
+                });
+            });
+
+            fuentesTienda.forEach(fu => {
+                tiendaEmbed.addFields({
+                    name: `🔤 Fuente: ${fu.nombreId} (${fu.precio} XP)`,
+                    value: `Nivel Mínimo: ${fu.nivelMinimo ?? 'Ninguno'}`
+                });
+                opcionesMenu.push({
+                    label: `Fuente: ${fu.nombreId} (${fu.precio} XP)`,
+                    description: `Req. Nivel ${fu.nivelMinimo ?? 1}`,
+                    value: `comprar_font_${fu.nombreId}`,
+                    emoji: '🔤'
+                });
+            });
+
+            packsTienda.forEach(p => {
+                tiendaEmbed.addFields({
+                    name: `📦 Pack: ${p.nombreId} (${p.precio} XP)`,
+                    value: `Nivel Mínimo: ${p.nivelMinimo ?? 'Ninguno'}`
+                });
+                opcionesMenu.push({
+                    label: `Pack: ${p.nombreId} (${p.precio} XP)`,
+                    description: `Req. Nivel ${p.nivelMinimo ?? 1}`,
+                    value: `comprar_pack_${p.nombreId}`,
+                    emoji: '📦'
+                });
+            });
+
+            tablasTienda.forEach(t => {
+                tiendaEmbed.addFields({
+                    name: `🪞 Tabla: ${t.nombreId} (${t.precio} XP)`,
+                    value: `Nivel Mínimo: ${t.nivelMinimo ?? 'Ninguno'}`
+                });
+                opcionesMenu.push({
+                    label: `Tabla: ${t.nombreId} (${t.precio} XP)`,
+                    description: `Req. Nivel ${t.nivelMinimo ?? 1}`,
+                    value: `comprar_tabla_${t.nombreId}`,
+                    emoji: '🪞'
+                });
+            });
+
+            if (opcionesMenu.length === 0) {
+                tiendaEmbed.addFields({ name: '⚠️ Tienda Vacía', value: 'Pepo todavía no ha subido cosméticos a la tienda.' });
+                return await interaction.editReply({ embeds: [tiendaEmbed] });
             }
+
+            const menuSelec = new StringSelectMenuBuilder()
+                .setCustomId('tienda_menu')
+                .setPlaceholder('Elegí un cosmético para comprar...')
+                .addOptions(opcionesMenu);
+
+            const fila = new ActionRowBuilder().addComponents(menuSelec);
+            return await interaction.editReply({ embeds: [tiendaEmbed], components: [fila] });
         }
 
-        if (rolesArray.length === 0) {
-            return await interaction.editReply({ content: '❌ Debes agregar al menos un rol al menú.' });
-        }
+        if (commandName === 'setpack') {
+            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
 
-        try {
-            await AutoRoleMenu.findOneAndUpdate(
-                { guildId: interaction.guild.id, nombreId },
-                { guildId: interaction.guild.id, nombreId, roles: rolesArray, precio, nivelMinimo, propietarioId },
+            const nombrePack = interaction.options.getString('nombre_pack').toLowerCase().trim();
+            const fondoId = interaction.options.getString('fondo_id').toLowerCase().trim();
+            const fuenteId = interaction.options.getString('fuente_id').toLowerCase().trim();
+            const precio = interaction.options.getInteger('precio');
+            const nivel = interaction.options.getInteger('nivel');
+
+            await Pack.findOneAndUpdate(
+                { guildId: interaction.guild.id, nombreId: nombrePack },
+                { fondoNombreId: fondoId, fuenteNombreId: fuenteId, precio: precio ?? null, nivelMinimo: nivel ?? null },
                 { upsert: true, new: true }
             );
-
-            const tipoTexto = propietarioId ? `🔒 Exclusivo para <@${propietarioId}>` : `🌐 Público (Para todos)`;
-            return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
-        } catch (err) {
-            console.error("Error en /setauto:", err);
-            return await interaction.editReply(`❌ Error al guardar el menú: \`${err.message}\``);
+            return await interaction.editReply(`📦 ¡Pack Combo **"${nombrePack}"** creado con éxito!`);
         }
-                }
 
-    if (commandName === 'autorol') {
-        try {
+        if (commandName === 'setfont') {
+            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
+
+            const nombreId = interaction.options.getString('nombre_id').toLowerCase().trim();
+            const archivo = interaction.options.getAttachment('archivo');
+            const precio = interaction.options.getInteger('precio');
+            const nivel = interaction.options.getInteger('nivel');
+
+            const response = await fetch(archivo.url);
+            const buffer = Buffer.from(await response.arrayBuffer());
+            GlobalFonts.register(buffer, nombreId);
+
+            await Font.findOneAndUpdate(
+                { guildId: interaction.guild.id, nombreId },
+                { fontUrl: archivo.url, precio: precio ?? null, nivelMinimo: nivel ?? null },
+                { upsert: true, new: true }
+            );
+            return await interaction.editReply(`✅ ¡Fuente **"${nombreId}"** registrada con éxito!`);
+        }
+
+        if (commandName === 'setbg') {
+            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
+
+            const nombreInput = interaction.options.getString('nombre') || interaction.options.getString('nombre_id');
+            const nombreId = nombreInput.toLowerCase().trim();
+            const urlImagen = interaction.options.getAttachment('imagen').url;
+            const precio = interaction.options.getInteger('precio') || null;
+            const nivelMinimo = interaction.options.getInteger('nivel') || null;
+
+            await Background.findOneAndUpdate(
+                { guildId: interaction.guild.id, nombreId },
+                { guildId: interaction.guild.id, nombreId, fondoUrl: urlImagen, urlImagen, precio, nivelMinimo },
+                { upsert: true, new: true }
+            );
+            return await interaction.editReply(`✅ ¡Fondo **"${nombreId}"** guardado en Mongo al centavo!`);
+        }
+
+        if (commandName === 'delbg') {
+            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
+
+            const nombreId = interaction.options.getString('nombre_id').toLowerCase().trim();
+            await Background.findOneAndDelete({ guildId: interaction.guild.id, nombreId: new RegExp(`^${nombreId}$`, 'i') });
+            return await interaction.editReply(`🗑️ ¡Fondo **"${nombreId}"** eliminado!`);
+        }
+
+                if (commandName === 'settabla') {
+            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
+
             const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
-            const guildId = interaction.guild.id;
-            const userId = interaction.user.id;
+            const urlImagen = interaction.options.getAttachment('imagen').url;
+            const precio = interaction.options.getInteger('precio') || null;
+            const nivelMinimo = interaction.options.getInteger('nivel') || null;
+
+            await Tabla.findOneAndUpdate(
+                { guildId: interaction.guild.id, nombreId },
+                { urlImagen, precio, nivelMinimo },
+                { upsert: true, new: true }
+            );
+            return await interaction.editReply(`✅ ¡Tabla **"${nombreId}"** guardada con éxito!`);
+        } // <--- AQUÍ SE CIERRA BIEN EL IF DE SETTABLA ALV
+
+    } catch (err) {
+        console.error("Error crítico en manejador de comandos slash:", err);
+    }
+});
+
+// --- MANEJADOR DE SELECCIONES DE LA TIENDA Y MENÚS ---
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isStringSelectMenu()) return;
+
+    const { customId, values } = interaction;
+    const userId = interaction.user.id;
+    const guildId = interaction.guild.id;
+
+    try {
+        // --- MANEJADOR DE AUTOROLES ---
+        if (customId.startsWith('autorol_select_')) {
+            const nombreId = customId.replace('autorol_select_', '');
+            const roleIdSeleccionado = values[0];
 
             const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
-            if (!menuData) {
-                return await interaction.reply({ content: `❌ No existe ningún menú de autorol con el nombre \`${nombreId}\` alv.`, ephemeral: true });
+            if (!menuData) return await interaction.reply({ content: '❌ Este menú ya no existe alv.', ephemeral: true });
+
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            const nivelUsuario = userXpData ? userXpData.level : 1;
+            const xpUsuario = userXpData ? userXpData.xp : 0;
+
+            if (nivelUsuario < menuData.nivelMinimo) {
+                return await interaction.reply({ content: `❌ Necesitas ser **Nivel ${menuData.nivelMinimo}** para reclamar este rol (Tu nivel actual: ${nivelUsuario}).`, ephemeral: true });
             }
 
-            if (menuData.propietarioId && menuData.propietarioId !== userId) {
-                return await interaction.reply({ content: `❌ Este menú de autoroles es **exclusivo** y pertenece a otro usuario alv. No puedes desplegarlo.`, ephemeral: true });
+            if (menuData.precio > 0 && xpUsuario < menuData.precio) {
+                return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP** (Tienes: ${xpUsuario} XP).`, ephemeral: true });
             }
 
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`autorol_select_${nombreId}`)
-                .setPlaceholder(`📂 Selecciona un rol del menú: ${nombreId}`)
-                .addOptions(
-                    menuData.roles.map(r => ({
-                        label: r.label,
-                        value: r.roleId,
-                        description: `Reclamar rol ${r.label}`,
-                        emoji: '✨'
-                    }))
-                );
+            const member = interaction.member;
+            const role = interaction.guild.roles.cache.get(roleIdSeleccionado);
+            if (!role) return await interaction.reply({ content: '❌ El rol seleccionado ya no existe en el servidor.', ephemeral: true });
 
-            const row = new ActionRowBuilder().addComponents(selectMenu);
-
-            const embed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle(`✨ Menú de Autoroles: ${nombreId.toUpperCase()}`)
-                .setDescription(`Usa el menú desplegable de abajo para equiparte/obtener el rol.\n\n• **Precio:** ${menuData.precio > 0 ? `${menuData.precio} XP` : 'Gratis'}\n• **Nivel Mínimo:** ${menuData.nivelMinimo}`)
-                .setFooter({ text: 'Plutus • Sistema de Autoroles', iconURL: client.user.displayAvatarURL() });
-
-            return await interaction.reply({ embeds: [embed], components: [row] });
-        } catch (err) {
-            console.error("Error en /autorol:", err);
-            if (!interaction.replied) await interaction.reply({ content: `❌ Error al desplegar el autorol: \`${err.message}\``, ephemeral: true });
+            if (member.roles.cache.has(roleIdSeleccionado)) {
+                await member.roles.remove(roleIdSeleccionado);
+                return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}>.`, ephemeral: true });
+            } else {
+                if (menuData.precio > 0) {
+                    userXpData.xp -= menuData.precio;
+                    await userXpData.save();
+                }
+                await member.roles.add(roleIdSeleccionado);
+                return await interaction.reply({ content: `✅ ¡Te has equipado con éxito el rol <@&${roleIdSeleccionado}>! ${menuData.precio > 0 ? `(Se te descontaron ${menuData.precio} XP)` : ''}`, ephemeral: true });
+            }
         }
-    }
         
-    } 
-});
          // --- MANEJADOR DE SELECCIONES DE LA TIENDA Y MENÚS ---
 client.on('interactionCreate', async interaction => {
     if (!interaction.isStringSelectMenu()) return;
