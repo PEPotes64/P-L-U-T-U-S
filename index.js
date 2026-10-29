@@ -894,7 +894,7 @@ client.on('interactionCreate', async interaction => {
     } 
 });
 
-// --- MANEJADOR DE SELECCIONES DE PLUTUS (TIENDA Y ARMARIO) ---
+                            // --- MANEJADOR DE SELECCIONES DE LA TIENDA (MENÚS) ---
 client.on('interactionCreate', async interaction => {
     if (!interaction.isStringSelectMenu()) return;
 
@@ -902,17 +902,6 @@ client.on('interactionCreate', async interaction => {
 
     try {
         if (customId === 'tienda_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const opcion = values[0];
-            const userId = interaction.user.id;
-            const guildId = interaction.guild.id;
-
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
-
-            const xpTotalActual = obtenerXpTotal(userXpData);
-
-                    if (customId === 'tienda_menu') {
             await interaction.deferReply({ ephemeral: true });
             const opcion = values[0];
             const userId = interaction.user.id;
@@ -1149,8 +1138,7 @@ client.on('interactionCreate', async interaction => {
 
                 return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
             }
-                    }
-                                                         
+        }
 
         if (customId === 'equipar_tabla_menu') {
             await interaction.deferReply({ ephemeral: true });
@@ -1194,8 +1182,18 @@ client.on('interactionCreate', async interaction => {
             await userXpData.save();
             return await interaction.editReply({ content: `📦 ¡Te equipaste el pack combo **"${packId}"** con éxito!` });
         }
-                if (interaction.isButton()) {
-        const { customId } = interaction;
+    } catch (err) {
+        console.error("Error en menús de selección de Plutus:", err);
+    }
+});
+
+// --- MANEJADOR DE BOTONES (COMPRAS Y CONFIRMACIONES) ---
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+
+    const { customId } = interaction;
+
+    try {
         if (customId === 'cancelar_compra') {
             return await interaction.update({ content: '❌ Compra cancelada alv.', embeds: [], files: [], components: [] });
         }
@@ -1268,7 +1266,7 @@ client.on('interactionCreate', async interaction => {
             }
         }
     } catch (err) {
-        console.error("Error en interacciones del bot Plutus:", err);
+        console.error("Error en botones de compra de Plutus:", err);
     }
 });
 
