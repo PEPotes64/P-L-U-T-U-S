@@ -270,7 +270,7 @@ async function generarTarjetaCritica({
         ctx.fillRect(0, 0, width, height);
     }
 
-            // --- ÚNICO BLOQUE OFICIAL PARA LA TABLA ---
+                // --- BLOQUE FINAL DE LA TABLA CON OPACIDAD AL 40% ---
     let tablaRenderizada = false;
     if (tablaUrl) {
         try {
@@ -281,10 +281,11 @@ async function generarTarjetaCritica({
 
                 ctx.save();
                 ctx.beginPath();
-                // Reemplaza TODO el panel interior con las medidas exactas (X:20, Y:20, Ancho:960, Alto:560, Radio:20)
                 ctx.roundRect(20, 20, width - 40, height - 40, 20);
-                ctx.clip(); // Recorta para que encaje perfecto en los bordes redondeados
+                ctx.clip(); // Recorta con los bordes redondeados perfectos
                 
+                // Le bajamos la opacidad a 0.4 para que trasluzca el fondo chido
+                ctx.globalAlpha = 0.4;
                 ctx.drawImage(imgTabla, 20, 20, width - 40, height - 40);
                 ctx.restore();
                 tablaRenderizada = true;
@@ -294,7 +295,7 @@ async function generarTarjetaCritica({
         }
     }
 
-    // Si el usuario no tiene tabla equipada o falló, se pinta el panel oscuro clásico de respaldo
+    // Si no hay tabla, se dibuja el panel oscuro clásico de respaldo
     if (!tablaRenderizada) {
         ctx.save();
         ctx.fillStyle = 'rgba(15, 15, 20, 0.75)';
