@@ -600,7 +600,7 @@ client.on('interactionCreate', async interaction => {
                 }
             }
 
-            let urlTablaUsار = null;
+            let urlTablaUsar = null;
             if (nombreTabla && nombreTabla !== 'Predeterminada') {
                 const regexTabla = new RegExp(`^${nombreTabla.trim()}$`, 'i');
                 const tablaObj = await Tabla.findOne({ guildId: interaction.guild.id, nombreId: regexTabla });
