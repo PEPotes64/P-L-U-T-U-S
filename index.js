@@ -222,8 +222,6 @@ const dataTabla = {
     ]
 };
 
-const { ApplicationCommandOptionType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-
 const dataSetAuto = {
     name: 'setauto',
     description: 'Crea un menú de autoroles público o exclusivo (Exclusivo Pepo)',
