@@ -484,7 +484,7 @@ client.on('interactionCreate', async interaction => {
 
     const { commandName } = interaction;
 
-    if (commandName === 'perfil') {
+        if (commandName === 'perfil') {
         try {
             await interaction.deferReply({ ephemeral: true });
             const userId = interaction.user.id;
@@ -516,14 +516,64 @@ client.on('interactionCreate', async interaction => {
             const tablasPredeterminadas = await Tabla.find({ guildId, precio: null, nivelMinimo: null });
             const nombresTablasGratis = [...tablasGratisLvl, ...tablasPredeterminadas].map(t => t.nombreId);
             const todasMisTablas = [...new Set([...nombresTablasGratis, ...tablasCompradas])];
-                        const perfilEmbed = new EmbedBuilder()
+
+            // --- OBTENEMOS LOS COSMÉTICOS EQUIPADOS ACTUALMENTE ---
+            const nombreCartel = userXpData?.cartelEquipado;
+            const fuenteNombre = userXpData?.fuenteEquipada;
+            const nombreTabla = userXpData?.tablaEquipada;
+
+            let urlFondoUsar = null;
+            if (nombreCartel && nombreCartel !== 'Ninguno') {
+                const regexBg = new RegExp(`^${nombreCartel.trim()}$`, 'i');
+                const bgObj = await Background.findOne({ guildId, nombreId: regexBg });
+                if (bgObj) {
+                    urlFondoUsar = bgObj.fondoUrl || bgObj.urlImagen;
+                }
+            }
+
+            let urlTablaUsar = null;
+            if (nombreTabla && nombreTabla !== 'Predeterminada') {
+                const regexTabla = new RegExp(`^${nombreTabla.trim()}$`, 'i');
+                const tablaObj = await Tabla.findOne({ guildId, nombreId: regexTabla });
+                if (tablaObj) {
+                    urlTablaUsar = tablaObj.urlImagen || tablaObj.url;
+                }
+            }
+
+            // --- GENERAMOS EL CANVAS DE PREVISIÓN DEL ARMARIO ---
+            // Podemos pasarle datos de prueba o estadísticas genéricas para que luzca épica la tarjeta
+            const bufferArmario = await generarTarjetaCritica({
+                dibujoUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 256 }), // Ponemos su avatar de muestra
+                artistaNombre: interaction.user.username,
+                artistaAvatarUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 256 }),
+                loBueno: "¡Tus cosméticos actuales combinan de pelos!",
+                loMalo: "Ninguno, estás listo para triunfar alv.",
+                resumen: "Vista previa de tu armario activo en Plutus.",
+                fondoUrl: urlFondoUsar,
+                tablaUrl: urlTablaUsar,
+                positivoPct: 100,
+                stats: [
+                    { nombre: 'Nivel', val: userXpData?.level || 1 },
+                    { nombre: 'XP', val: Math.min(100, userXpData?.xp || 10) },
+                    { nombre: 'Arte', val: 95 },
+                    { nombre: 'Estilo', val: 90 },
+                    { nombre: 'Facha', val: 100 }
+                ],
+                fuenteNombre
+            });
+
+            const attachment = new AttachmentBuilder(bufferArmario, { name: `perfil_${interaction.user.username}.png` });
+
+            const perfilEmbed = new EmbedBuilder()
                 .setColor('#FFD700')
-                .setTitle(`🎨 Armario de Plutus de ${interaction.user.username}`)
-                .setDescription('Elegí y equipá tus cosméticos artísticos.')
+                .setTitle(`🎨 Armario y Tarjeta Activa de ${interaction.user.username}`)
+                .setDescription('Así es como se ve tu tarjeta actualmente con tus cosméticos equipados. Elegí abajo qué cambiar o equipar.')
                 .addFields(
-                    { name: '🌅 Fondo Equipado:', value: `\`${userXpData?.cartelEquipado || 'Ninguno'}\``, inline: true },
-                    { name: '🪞 Tabla Equipada:', value: `\`${userXpData?.tablaEquipada || 'Predeterminada'}\``, inline: true }
+                    { name: '🌅 Fondo Equipado:', value: `\`${nombreCartel || 'Ninguno'}\``, inline: true },
+                    { name: '🪞 Tabla Equipada:', value: `\`${nombreTabla || 'Predeterminada'}\``, inline: true },
+                    { name: '🔤 Fuente Equipada:', value: `\`${fuenteNombre || 'Predeterminada'}\``, inline: true }
                 )
+                .setImage(`attachment://perfil_${interaction.user.username}.png`)
                 .setFooter({ text: 'Plutus • Tesorería y Arte', iconURL: client.user.displayAvatarURL() });
 
             const componentes = [];
@@ -560,12 +610,13 @@ client.on('interactionCreate', async interaction => {
                 componentes.push(new ActionRowBuilder().addComponents(menuTablas));
             }
             
-            return await interaction.editReply({ embeds: [perfilEmbed], components: componentes });
+            return await interaction.editReply({ embeds: [perfilEmbed], files: [attachment], components: componentes });
         } catch (err) {
             console.error("Error en /perfil:", err);
             if (interaction.deferred) await interaction.editReply(`❌ Error al abrir perfil: \`${err.message}\``);
         }
-    }
+        }
+    
             if (commandName === 'critica') {
         if (interaction.user.id !== PEPO_ID) {
             return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
