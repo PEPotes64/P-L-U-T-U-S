@@ -1474,6 +1474,7 @@ client.on('interactionCreate', async interaction => {
         }
 
                 // --- MANEJADOR DE AUTOROLES ---
+        try {
         if (customId.startsWith('autorol_select_')) {
             const nombreId = customId.replace('autorol_select_', '');
             const roleIdSeleccionado = values[0];
