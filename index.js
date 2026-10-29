@@ -307,24 +307,6 @@ async function generarTarjetaCritica({
         ctx.stroke();
         ctx.restore();
     }
-
-            if (tablaUrl) {
-        try {
-            const resTabla = await fetch(tablaUrl);
-            if (resTabla.ok) {
-                const bufTabla = Buffer.from(await resTabla.arrayBuffer());
-                const imgTabla = await loadImage(bufTabla);
-
-                ctx.save();
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.globalAlpha = 0.90;
-                ctx.drawImage(imgTabla, 450, 120, 510, 390);
-                ctx.restore();
-            }
-        } catch (e) {
-            console.error("⚠️ [CANVAS] Error cargando tabla:", e.message);
-        }
-            }
     
     ctx.restore();
 
