@@ -722,40 +722,35 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-            if (commandName === 'autorol') {
-                const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
+                        if (commandName === 'autorol') {
                 const guildId = interaction.guild.id;
-                const userId = interaction.user.id;
+                const menusDisponibles = await AutoRoleMenu.find({ guildId });
 
-                const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
-                if (!menuData) {
-                    return await interaction.reply({ content: `❌ No existe ningún menú de autorol con el nombre \`${nombreId}\` alv.`, ephemeral: true });
-                }
-
-                if (menuData.propietarioId && menuData.propietarioId !== userId) {
-                    return await interaction.reply({ content: `❌ Este menú de autoroles es exclusivo y pertenece a otro usuario alv.`, ephemeral: true });
+                if (!menusDisponibles || menusDisponibles.length === 0) {
+                    return await interaction.reply({ content: '❌ Todavía no hay ningún menú de autoroles creado en este servidor alv.', ephemeral: true });
                 }
 
                 const selectMenu = new StringSelectMenuBuilder()
-                    .setCustomId(`autorol_select_${menuData.nombreId}`)
-                    .setPlaceholder(`📂 Selecciona un rol del menú: ${menuData.nombreId}`)
+                    .setCustomId('seleccionar_menu_autorol')
+                    .setPlaceholder('✅ Elige un menú de autoroles...')
                     .addOptions(
-                        menuData.roles.map(r => ({
-                            label: r.label,
-                            value: r.roleId,
-                            description: `Reclamar rol ${r.label}`,
-                            emoji: '✨'
+                        menusDisponibles.map(m => ({
+                            label: `Menú: ${m.nombreId.toUpperCase()}`,
+                            description: `Roles disponibles: ${m.roles.length} | Creador/Dueño: ${m.propietarioId ? 'Exclusivo 🔒' : 'Público 🌐'}`,
+                            value: `ver_menu_${m.nombreId}`,
+                            emoji: '✅'
                         }))
                     );
 
                 const row = new ActionRowBuilder().addComponents(selectMenu);
                 const embed = new EmbedBuilder()
                     .setColor('#FFD700')
-                    .setTitle(`✨ Menú de Autoroles: ${menuData.nombreId.toUpperCase()}`)
-                    .setDescription(`Usa el menú desplegable de abajo para equiparte/obtener el rol.\n\n• **Precio:** ${menuData.precio > 0 ? `${menuData.precio} XP` : 'Gratis'}\n• **Nivel Mínimo:** ${menuData.nivelMinimo}`);
+                    .setTitle('📜 Directorio de Autoroles')
+                    .setDescription('Selecciona abajo el menú de autoroles que quieres abrir para equiparte tus roles alv.');
 
-                return await interaction.reply({ embeds: [embed], components: [row] });
-            }
+                return await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+             }
+        
         }
 
         // 2. MENÚS DESPLEGABLES (SELECT MENUS)
@@ -763,6 +758,37 @@ client.on('interactionCreate', async interaction => {
             const { customId, values } = interaction;
             const userId = interaction.user.id;
             const guildId = interaction.guild.id;
+
+                    if (customId === 'seleccionar_menu_autorol') {
+            const nombreId = values[0].replace('ver_menu_', '');
+            const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
+
+            if (!menuData) return await interaction.reply({ content: '❌ Este menú ya no existe alv.', ephemeral: true });
+
+            if (menuData.propietarioId && menuData.propietarioId !== userId) {
+                return await interaction.reply({ content: `❌ Este menú de autoroles es **exclusivo** y pertenece a otro usuario alv.`, ephemeral: true });
+            }
+
+            const selectMenuRoles = new StringSelectMenuBuilder()
+                .setCustomId(`autorol_select_${menuData.nombreId}`)
+                .setPlaceholder(`📂 Selecciona un rol de: ${menuData.nombreId}`)
+                .addOptions(
+                    menuData.roles.map(r => ({
+                        label: r.label,
+                        value: r.roleId,
+                        description: `Reclamar rol ${r.label}`,
+                        emoji: '🔹'
+                    }))
+                );
+
+            const rowRoles = new ActionRowBuilder().addComponents(selectMenuRoles);
+            const embedRoles = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle(`✨ Menú de Autoroles: ${menuData.nombreId.toUpperCase()}`)
+                .setDescription(`Usa el menú desplegable de abajo para equiparte o quitarte el rol.\n\n• **Precio:** ${menuData.precio > 0 ? `${menuData.precio} XP` : 'Gratis'}\n• **Nivel Mínimo:** ${menuData.nivelMinimo}`);
+
+            return await interaction.update({ embeds: [embedRoles], components: [rowRoles] });
+                    }
 
             if (customId.startsWith('autorol_select_')) {
                 const nombreId = customId.replace('autorol_select_', '');
