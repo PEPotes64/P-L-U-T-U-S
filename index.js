@@ -71,6 +71,7 @@ const PEPO_ID = '1259006426978713620';
 mongoose.connect(process.env.MONGO_URI)
     .then(async () => {
         console.log('✅ Conectado a MongoDB Atlas');
+        // Esto borra el índice maldito que causa el error de duplicados
         try {
             await mongoose.connection.collection('backgrounds').dropIndex('guildId_1');
             console.log('🗑️ Índice duplicado guildId_1 eliminado con éxito de MongoDB');
@@ -80,7 +81,7 @@ mongoose.connect(process.env.MONGO_URI)
     })
     .catch(err => console.error('❌ Error al conectar a MongoDB:', err));
 
-// --- COMANDOS SLASH DE PLUTUS ---
+// --- COMANDOS SLASH DE PLUTUS (SOLO ARTE, TIENDA COSMÉTICA Y PERFIL) ---
 const dataComprar = { name: 'comprar', description: 'Abre la tienda de cosméticos de Plutus gastando tu XP' };
 const dataPerfil = { name: 'perfil', description: 'Abre tu armario de fondos, fuentes y tablas' };
 
@@ -158,11 +159,6 @@ const dataTabla = {
     ]
 };
 
-const dataLimpiar = {
-    name: 'limpiar',
-    description: 'Borra todas las fuentes y tablas de Mongo (Exclusivo Pepo)'
-};
-
 client.once('ready', async () => {
     console.log(`Bot Plutus prendido como ${client.user.tag} > :v`);
 
@@ -185,7 +181,7 @@ client.once('ready', async () => {
     try {
         const comandosTotales = [
             dataComprar, dataPerfil, dataCritica, dataSetBg, 
-            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataLimpiar
+            dataDelBg, dataSetFont, dataSetPack, dataTabla
         ];
 
         for (const [guildId, guild] of client.guilds.cache) {
@@ -274,6 +270,7 @@ async function generarTarjetaCritica({
         ctx.fillRect(0, 0, width, height);
     }
 
+            // --- ÚNICO BLOQUE OFICIAL PARA LA TABLA ---
     let tablaRenderizada = false;
     if (tablaUrl) {
         try {
@@ -284,10 +281,10 @@ async function generarTarjetaCritica({
 
                 ctx.save();
                 ctx.beginPath();
+                // Reemplaza TODO el panel interior con las medidas exactas (X:20, Y:20, Ancho:960, Alto:560, Radio:20)
                 ctx.roundRect(20, 20, width - 40, height - 40, 20);
-                ctx.clip();
+                ctx.clip(); // Recorta para que encaje perfecto en los bordes redondeados
                 
-                ctx.globalAlpha = 0.4;
                 ctx.drawImage(imgTabla, 20, 20, width - 40, height - 40);
                 ctx.restore();
                 tablaRenderizada = true;
@@ -297,6 +294,7 @@ async function generarTarjetaCritica({
         }
     }
 
+    // Si el usuario no tiene tabla equipada o falló, se pinta el panel oscuro clásico de respaldo
     if (!tablaRenderizada) {
         ctx.save();
         ctx.fillStyle = 'rgba(15, 15, 20, 0.75)';
@@ -309,6 +307,24 @@ async function generarTarjetaCritica({
         ctx.stroke();
         ctx.restore();
     }
+
+            if (tablaUrl) {
+        try {
+            const resTabla = await fetch(tablaUrl);
+            if (resTabla.ok) {
+                const bufTabla = Buffer.from(await resTabla.arrayBuffer());
+                const imgTabla = await loadImage(bufTabla);
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.globalAlpha = 0.90;
+                ctx.drawImage(imgTabla, 450, 120, 510, 390);
+                ctx.restore();
+            }
+        } catch (e) {
+            console.error("⚠️ [CANVAS] Error cargando tabla:", e.message);
+        }
+            }
     
     ctx.restore();
 
@@ -504,8 +520,8 @@ client.on('interactionCreate', async interaction => {
 
             const packsComprados = userXpData?.packsComprados || [];
             const packsGratisLvl = await Pack.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
-            const packsPredeterminadas = await Pack.find({ guildId, precio: null, nivelMinimo: null });
-            const nombresPacksGratis = [...packsGratisLvl, ...packsPredeterminadas].map(p => p.nombreId);
+            const packsPredeterminados = await Pack.find({ guildId, precio: null, nivelMinimo: null });
+            const nombresPacksGratis = [...packsGratisLvl, ...packsPredeterminados].map(p => p.nombreId);
             const todosMisPacks = [...new Set([...nombresPacksGratis, ...packsComprados])];
 
             const tablasCompradas = userXpData?.tablasCompradas || [];
@@ -513,13 +529,14 @@ client.on('interactionCreate', async interaction => {
             const tablasPredeterminadas = await Tabla.find({ guildId, precio: null, nivelMinimo: null });
             const nombresTablasGratis = [...tablasGratisLvl, ...tablasPredeterminadas].map(t => t.nombreId);
             const todasMisTablas = [...new Set([...nombresTablasGratis, ...tablasCompradas])];
-                        const perfilEmbed = new EmbedBuilder()
+
+            const perfilEmbed = new EmbedBuilder()
                 .setColor('#FFD700')
                 .setTitle(`🎨 Armario de Plutus de ${interaction.user.username}`)
                 .setDescription('Elegí y equipá tus cosméticos artísticos.')
                 .addFields(
                     { name: '🌅 Fondo Equipado:', value: `\`${userXpData?.cartelEquipado || 'Ninguno'}\``, inline: true },
-                    { name: '🪞 Tabla Equipada:', value: `\`${userXpData?.tablaEquipada || 'Predeterminada'}\``, inline: true }
+                                        { name: '🪞 Tabla Equipada:', value: `\`${userXpData?.tablaEquipada || 'Predeterminada'}\``, inline: true }
                 )
                 .setFooter({ text: 'Plutus • Tesorería y Arte', iconURL: client.user.displayAvatarURL() });
 
@@ -562,8 +579,9 @@ client.on('interactionCreate', async interaction => {
             console.error("Error en /perfil:", err);
             if (interaction.deferred) await interaction.editReply(`❌ Error al abrir perfil: \`${err.message}\``);
         }
-                    }
-       if (commandName === 'critica') {
+    }
+
+    if (commandName === 'critica') {
         if (interaction.user.id !== PEPO_ID) {
             return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
         }
@@ -600,7 +618,7 @@ client.on('interactionCreate', async interaction => {
                 }
             }
 
-            let urlTablaUsار = null;
+            let urlTablaUsar = null;
             if (nombreTabla && nombreTabla !== 'Predeterminada') {
                 const regexTabla = new RegExp(`^${nombreTabla.trim()}$`, 'i');
                 const tablaObj = await Tabla.findOne({ guildId: interaction.guild.id, nombreId: regexTabla });
@@ -632,8 +650,9 @@ client.on('interactionCreate', async interaction => {
             console.error("❌ Error crítico en /critica:", error);
             return await interaction.editReply('❌ Puchica maje, falló el renderizado de la crítica.');
         }
-                }
-        if (commandName === 'comprar') {
+    }
+
+    if (commandName === 'comprar') {
         await interaction.deferReply();
 
         const fondosTienda = await Background.find({ guildId: interaction.guild.id, precio: { $ne: null } });
@@ -731,7 +750,7 @@ client.on('interactionCreate', async interaction => {
             { upsert: true, new: true }
         );
         return await interaction.editReply(`📦 ¡Pack Combo **"${nombrePack}"** creado con éxito!`);
-    }
+        }
 
     if (commandName === 'setfont') {
         if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
@@ -754,7 +773,7 @@ client.on('interactionCreate', async interaction => {
         return await interaction.editReply(`✅ ¡Fuente **"${nombreId}"** registrada con éxito!`);
     }
 
-    if (commandName === 'setbg') {
+        if (commandName === 'setbg') {
         if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
         await interaction.deferReply({ ephemeral: true });
 
@@ -770,7 +789,9 @@ client.on('interactionCreate', async interaction => {
             { upsert: true, new: true }
         );
         return await interaction.editReply(`✅ ¡Fondo **"${nombreId}"** guardado en Mongo al centavo!`);
+            
     }
+    
 
     if (commandName === 'delbg') {
         if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
@@ -797,20 +818,6 @@ client.on('interactionCreate', async interaction => {
         );
         return await interaction.editReply(`✅ ¡Tabla **"${nombreId}"** guardada con éxito!`);
     }
-
-    if (commandName === 'limpiar') {
-        if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-        await interaction.deferReply({ ephemeral: true });
-
-        try {
-            await Font.deleteMany({});
-            await Tabla.deleteMany({});
-            return await interaction.editReply('🧹 ¡Listo Pepo! Se borraron todas las fuentes y las tablas de MongoDB. Quedaron en ceros alv Bv :v');
-        } catch (err) {
-            console.error("Error al limpiar mongo:", err);
-            return await interaction.editReply('❌ Fallo la limpieza alv.');
-        }
-    } 
 });
 
 // --- MANEJADOR DE SELECCIONES DE PLUTUS (TIENDA Y ARMARIO) ---
@@ -946,8 +953,9 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-console.log('🔄 Conectando bot de Plutus...');
+console.log('🔄 Conectando bot de Plutus a Discord...');
 client.login(process.env.DISCORD_TOKEN)
     .then(() => console.log('✅ ¡Login exitoso en el bot de Plutus!'))
     .catch(err => console.error('❌ ERROR CRÍTICO EN LOGIN ALV:', err));
-            
+           
+                
