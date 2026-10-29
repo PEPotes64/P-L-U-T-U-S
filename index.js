@@ -1556,7 +1556,7 @@ client.on('interactionCreate', async interaction => {
         } catch (err) {
         console.error("Error en menús de selección de Plutus:", err);
     }
-}); // <-- Este cierra el client.on de los selects
+});
 
 
 // --- MANEJADOR DE BOTONES (COMPRAS Y CONFIRMACIONES) ---
