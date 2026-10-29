@@ -807,7 +807,7 @@ client.on('interactionCreate', async interaction => {
         return await interaction.editReply(`✅ ¡Tabla **"${nombreId}"** guardada con éxito!`);
     }
 
-        if (commandName === 'limpiar') {
+            if (commandName === 'limpiar') {
         if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
         await interaction.deferReply({ ephemeral: true });
 
@@ -818,7 +818,8 @@ client.on('interactionCreate', async interaction => {
         } catch (err) {
             console.error("Error al limpiar mongo:", err);
             return await interaction.editReply('❌ Fallo la limpieza alv.');
-     }
+        }
+    } 
     
 });
 
