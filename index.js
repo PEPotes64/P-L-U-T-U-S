@@ -912,73 +912,245 @@ client.on('interactionCreate', async interaction => {
 
             const xpTotalActual = obtenerXpTotal(userXpData);
 
+                    if (customId === 'tienda_menu') {
+            await interaction.deferReply({ ephemeral: true });
+            const opcion = values[0];
+            const userId = interaction.user.id;
+            const guildId = interaction.guild.id;
+
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
+
+            const xpTotalActual = obtenerXpTotal(userXpData);
+
+            // --- PREVISUALIZACIÓN DE FONDO ---
             if (opcion.startsWith('comprar_bg_')) {
                 const bgId = opcion.replace('comprar_bg_', '');
                 const bgObj = await Background.findOne({ guildId, nombreId: bgId });
-                if (!bgObj) return await interaction.editReply('❌ El fondo ya no existe.');
-                if (bgObj.nivelMinimo && userXpData.level < bgObj.nivelMinimo) return await interaction.editReply(`❌ Requiere Nivel ${bgObj.nivelMinimo}.`);
-                if (xpTotalActual < bgObj.precio) return await interaction.editReply(`❌ Necesitás ${bgObj.precio} XP.`);
+                if (!bgObj) return await interaction.editReply({ content: '❌ El fondo ya no existe alv.' });
 
-                recalcularProgreso(userXpData, xpTotalActual - bgObj.precio);
-                if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
-                if (!userXpData.cartelesComprados.includes(bgId)) userXpData.cartelesComprados.push(bgId);
-                userXpData.cartelEquipado = bgId;
-                await userXpData.save();
-                return await interaction.editReply(`🖼️ ¡Compraste y equipaste el fondo **${bgId}** con éxito!`);
+                const canvas = createCanvas(1000, 600);
+                const ctx = canvas.getContext('2d');
+                
+                try {
+                    const resBg = await fetch(bgObj.fondoUrl || bgObj.urlImagen);
+                    if (resBg.ok) {
+                        const img = await loadImage(Buffer.from(await resBg.arrayBuffer()));
+                        ctx.drawImage(img, 0, 0, 1000, 600);
+                    } else {
+                        ctx.fillStyle = '#1a1035';
+                        ctx.fillRect(0, 0, 1000, 600);
+                    }
+                } catch (e) {
+                    ctx.fillStyle = '#1a1035';
+                    ctx.fillRect(0, 0, 1000, 600);
+                }
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.beginPath();
+                ctx.roundRect(150, 220, 700, 160, 20);
+                ctx.fill();
+
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 36px sans-serif';
+                ctx.fillText(`🖼️ FONDO: ${bgId.toUpperCase()}`, 190, 290);
+
+                ctx.fillStyle = '#E2E2E8';
+                ctx.font = '22px sans-serif';
+                ctx.fillText(`Precio: ${bgObj.precio} XP | Req. Nivel: ${bgObj.nivelMinimo ?? 1}`, 190, 335);
+
+                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_bg_${bgId}.png` });
+                
+                const embedPreview = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`🖼️ Previsualización de Fondo: ${bgId}`)
+                    .setDescription(`Precio: **${bgObj.precio} XP**\nNivel Mínimo: **${bgObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
+                    .setImage(`attachment://preview_bg_${bgId}.png`);
+
+                const botones = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`exec_comprar_bg_${bgId}`)
+                        .setLabel('🛒 Confirmar Compra')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('cancelar_compra')
+                        .setLabel('❌ Cancelar')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
             }
 
+            // --- PREVISUALIZACIÓN DE FUENTE ---
             if (opcion.startsWith('comprar_font_')) {
                 const fontId = opcion.replace('comprar_font_', '');
                 const fontObj = await Font.findOne({ guildId, nombreId: fontId });
-                if (!fontObj) return await interaction.editReply('❌ La fuente ya no existe.');
-                if (fontObj.nivelMinimo && userXpData.level < fontObj.nivelMinimo) return await interaction.editReply(`❌ Requiere Nivel ${fontObj.nivelMinimo}.`);
-                if (xpTotalActual < fontObj.precio) return await interaction.editReply(`❌ Necesitás ${fontObj.precio} XP.`);
+                if (!fontObj) return await interaction.editReply({ content: '❌ La fuente ya no existe alv.' });
 
-                recalcularProgreso(userXpData, xpTotalActual - fontObj.precio);
-                if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
-                if (!userXpData.fuentesCompradas.includes(fontId)) userXpData.fuentesCompradas.push(fontId);
-                userXpData.fuenteEquipada = fontId;
-                await userXpData.save();
-                return await interaction.editReply(`🔤 ¡Compraste y equipaste la fuente **${fontId}** con éxito!`);
+                const canvas = createCanvas(1000, 600);
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#1a1035';
+                ctx.fillRect(0, 0, 1000, 600);
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.beginPath();
+                ctx.roundRect(150, 220, 700, 160, 20);
+                ctx.fill();
+
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 36px sans-serif';
+                ctx.fillText(`🔤 FUENTE: ${fontId.toUpperCase()}`, 190, 290);
+
+                ctx.fillStyle = '#E2E2E8';
+                ctx.font = '22px sans-serif';
+                ctx.fillText(`Precio: ${fontObj.precio} XP | Req. Nivel: ${fontObj.nivelMinimo ?? 1}`, 190, 335);
+
+                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_font_${fontId}.png` });
+                
+                const embedPreview = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`🔤 Previsualización de Fuente: ${fontId}`)
+                    .setDescription(`Precio: **${fontObj.precio} XP**\nNivel Mínimo: **${fontObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
+                    .setImage(`attachment://preview_font_${fontId}.png`);
+
+                const botones = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`exec_comprar_font_${fontId}`)
+                        .setLabel('🛒 Confirmar Compra')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('cancelar_compra')
+                        .setLabel('❌ Cancelar')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
             }
 
+            // --- PREVISUALIZACIÓN DE PACK ---
             if (opcion.startsWith('comprar_pack_')) {
                 const packId = opcion.replace('comprar_pack_', '');
                 const packObj = await Pack.findOne({ guildId, nombreId: packId });
-                if (!packObj) return await interaction.editReply('❌ El pack ya no existe.');
-                if (packObj.nivelMinimo && userXpData.level < packObj.nivelMinimo) return await interaction.editReply(`❌ Requiere Nivel ${packObj.nivelMinimo}.`);
-                if (xpTotalActual < packObj.precio) return await interaction.editReply(`❌ Necesitás ${packObj.precio} XP.`);
+                if (!packObj) return await interaction.editReply({ content: '❌ El pack ya no existe alv.' });
 
-                recalcularProgreso(userXpData, xpTotalActual - packObj.precio);
-                if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
-                if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
-                if (!userXpData.packsComprados) userXpData.packsComprados = [];
+                const bgObj = await Background.findOne({ guildId, nombreId: packObj.fondoNombreId });
+                const canvas = createCanvas(1000, 600);
+                const ctx = canvas.getContext('2d');
+                
+                try {
+                    if (bgObj && (bgObj.fondoUrl || bgObj.urlImagen)) {
+                        const resBg = await fetch(bgObj.fondoUrl || bgObj.urlImagen);
+                        if (resBg.ok) {
+                            const img = await loadImage(Buffer.from(await resBg.arrayBuffer()));
+                            ctx.drawImage(img, 0, 0, 1000, 600);
+                        } else {
+                            ctx.fillStyle = '#1a1035';
+                            ctx.fillRect(0, 0, 1000, 600);
+                        }
+                    } else {
+                        ctx.fillStyle = '#1a1035';
+                        ctx.fillRect(0, 0, 1000, 600);
+                    }
+                } catch (e) {
+                    ctx.fillStyle = '#1a1035';
+                    ctx.fillRect(0, 0, 1000, 600);
+                }
 
-                if (!userXpData.cartelesComprados.includes(packObj.fondoNombreId)) userXpData.cartelesComprados.push(packObj.fondoNombreId);
-                if (!userXpData.fuentesCompradas.includes(packObj.fuenteNombreId)) userXpData.fuentesCompradas.push(packObj.fuenteNombreId);
-                if (!userXpData.packsComprados.includes(packId)) userXpData.packsComprados.push(packId);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.beginPath();
+                ctx.roundRect(150, 200, 700, 180, 20);
+                ctx.fill();
 
-                userXpData.cartelEquipado = packObj.fondoNombreId;
-                userXpData.fuenteEquipada = packObj.fuenteNombreId;
-                await userXpData.save();
-                return await interaction.editReply(`📦 ¡Compraste y equipaste el pack combo **${packId}**!`);
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 36px sans-serif';
+                ctx.fillText(`📦 PACK: ${packId.toUpperCase()}`, 190, 270);
+
+                ctx.fillStyle = '#E2E2E8';
+                ctx.font = '20px sans-serif';
+                ctx.fillText(`Fondo: ${packObj.fondoNombreId} | Fuente: ${packObj.fuenteNombreId}`, 190, 315);
+                ctx.fillText(`Precio: ${packObj.precio} XP | Req. Nivel: ${packObj.nivelMinimo ?? 1}`, 190, 350);
+
+                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_pack_${packId}.png` });
+                
+                const embedPreview = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`📦 Previsualización de Pack: ${packId}`)
+                    .setDescription(`Incluye Fondo y Fuente.\nPrecio: **${packObj.precio} XP**\nNivel Mínimo: **${packObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
+                    .setImage(`attachment://preview_pack_${packId}.png`);
+
+                const botones = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`exec_comprar_pack_${packId}`)
+                        .setLabel('🛒 Confirmar Compra')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('cancelar_compra')
+                        .setLabel('❌ Cancelar')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
             }
 
+            // --- PREVISUALIZACIÓN DE TABLA ---
             if (opcion.startsWith('comprar_tabla_')) {
                 const tablaId = opcion.replace('comprar_tabla_', '');
                 const tablaObj = await Tabla.findOne({ guildId, nombreId: tablaId });
-                if (!tablaObj) return await interaction.editReply('❌ La tabla ya no existe.');
-                if (tablaObj.nivelMinimo && userXpData.level < tablaObj.nivelMinimo) return await interaction.editReply(`❌ Requiere Nivel ${tablaObj.nivelMinimo}.`);
-                if (xpTotalActual < tablaObj.precio) return await interaction.editReply(`❌ Necesitás ${tablaObj.precio} XP.`);
+                if (!tablaObj) return await interaction.editReply({ content: '❌ La tabla ya no existe alv.' });
 
-                recalcularProgreso(userXpData, xpTotalActual - tablaObj.precio);
-                if (!userXpData.tablasCompradas) userXpData.tablasCompradas = [];
-                if (!userXpData.tablasCompradas.includes(tablaId)) userXpData.tablasCompradas.push(tablaId);
-                userXpData.tablaEquipada = tablaId;
-                await userXpData.save();
-                return await interaction.editReply(`🪞 ¡Compraste y equipaste la tabla **${tablaId}** con éxito!`);
+                const canvas = createCanvas(1000, 600);
+                const ctx = canvas.getContext('2d');
+                
+                try {
+                    const resTabla = await fetch(tablaObj.urlImagen || tablaObj.url);
+                    if (resTabla.ok) {
+                        const img = await loadImage(Buffer.from(await resTabla.arrayBuffer()));
+                        ctx.drawImage(img, 0, 0, 1000, 600);
+                    } else {
+                        ctx.fillStyle = '#1a1035';
+                        ctx.fillRect(0, 0, 1000, 600);
+                    }
+                } catch (e) {
+                    ctx.fillStyle = '#1a1035';
+                    ctx.fillRect(0, 0, 1000, 600);
+                }
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.beginPath();
+                ctx.roundRect(150, 220, 700, 160, 20);
+                ctx.fill();
+
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 36px sans-serif';
+                ctx.fillText(`🪞 TABLA: ${tablaId.toUpperCase()}`, 190, 290);
+
+                ctx.fillStyle = '#E2E2E8';
+                ctx.font = '22px sans-serif';
+                ctx.fillText(`Precio: ${tablaObj.precio} XP | Req. Nivel: ${tablaObj.nivelMinimo ?? 1}`, 190, 335);
+
+                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_tabla_${tablaId}.png` });
+                
+                const embedPreview = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`🪞 Previsualización de Tabla: ${tablaId}`)
+                    .setDescription(`Precio: **${tablaObj.precio} XP**\nNivel Mínimo: **${tablaObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
+                    .setImage(`attachment://preview_tabla_${tablaId}.png`);
+
+                const botones = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`exec_comprar_tabla_${tablaId}`)
+                        .setLabel('🛒 Confirmar Compra')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('cancelar_compra')
+                        .setLabel('❌ Cancelar')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
             }
-        }
+                    }
+                                                         
 
         if (customId === 'equipar_tabla_menu') {
             await interaction.deferReply({ ephemeral: true });
