@@ -89,19 +89,80 @@ const dataPerfil = { name: 'perfil', description: 'Abre tu armario de fondos, fu
 
 const dataCritica = {
     name: 'critica',
-    description: 'Genera la tarjeta gráfica para un artista (Exclusivo Pepo)',
+    description: 'Genera la tarjeta gráfica de evaluación por disciplina (Exclusivo Pepo)',
     options: [
-        { name: 'artista', type: ApplicationCommandOptionType.User, description: 'Artista', required: true },
-        { name: 'foto', type: ApplicationCommandOptionType.Attachment, description: 'Dibujo', required: true },
-        { name: 'lo_bueno', type: ApplicationCommandOptionType.String, description: 'Lo bueno', required: true },
-        { name: 'lo_malo', type: ApplicationCommandOptionType.String, description: 'Lo malo', required: true },
-        { name: 'resumen', type: ApplicationCommandOptionType.String, description: 'Resumen', required: true },
-        { name: 'positivo', type: ApplicationCommandOptionType.Integer, description: 'Positivo %', required: false },
-        { name: 'lineart', type: ApplicationCommandOptionType.Integer, description: 'Lineart %', required: false },
-        { name: 'creatividad', type: ApplicationCommandOptionType.Integer, description: 'Creatividad %', required: false },
-        { name: 'detalles', type: ApplicationCommandOptionType.Integer, description: 'Detalles %', required: false },
-        { name: 'paleta', type: ApplicationCommandOptionType.Integer, description: 'Paleta %', required: false },
-        { name: 'pinceles', type: ApplicationCommandOptionType.Integer, description: 'Pinceles %', required: false }
+        {
+            name: 'arte',
+            description: 'Evaluar una obra de Arte / Dibujo',
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                { name: 'artista', type: ApplicationCommandOptionType.User, description: 'Artista', required: true },
+                { name: 'foto', type: ApplicationCommandOptionType.Attachment, description: 'Dibujo', required: true },
+                { name: 'lo_bueno', type: ApplicationCommandOptionType.String, description: 'Lo bueno', required: true },
+                { name: 'lo_malo', type: ApplicationCommandOptionType.String, description: 'Lo malo', required: true },
+                { name: 'resumen', type: ApplicationCommandOptionType.String, description: 'Resumen', required: true },
+                { name: 'positivo', type: ApplicationCommandOptionType.Integer, description: 'Positivo %', required: false },
+                { name: 'lineart', type: ApplicationCommandOptionType.Integer, description: 'Lineart %', required: false },
+                { name: 'creatividad', type: ApplicationCommandOptionType.Integer, description: 'Creatividad %', required: false },
+                { name: 'detalles', type: ApplicationCommandOptionType.Integer, description: 'Detalles %', required: false },
+                { name: 'paleta', type: ApplicationCommandOptionType.Integer, description: 'Paleta %', required: false },
+                { name: 'pinceles', type: ApplicationCommandOptionType.Integer, description: 'Pinceles %', required: false }
+            ]
+        },
+        {
+            name: 'modelado',
+            description: 'Evaluar un Modelado 3D',
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                { name: 'artista', type: ApplicationCommandOptionType.User, description: 'Creador 3D', required: true },
+                { name: 'foto', type: ApplicationCommandOptionType.Attachment, description: 'Render / Imagen', required: true },
+                { name: 'lo_bueno', type: ApplicationCommandOptionType.String, description: 'Lo bueno', required: true },
+                { name: 'lo_malo', type: ApplicationCommandOptionType.String, description: 'Lo malo', required: true },
+                { name: 'resumen', type: ApplicationCommandOptionType.String, description: 'Resumen', required: true },
+                { name: 'positivo', type: ApplicationCommandOptionType.Integer, description: 'Positivo %', required: false },
+                { name: 'topologia', type: ApplicationCommandOptionType.Integer, description: 'Topología %', required: false },
+                { name: 'escultura', type: ApplicationCommandOptionType.Integer, description: 'Escultura/Forma %', required: false },
+                { name: 'texturizado', type: ApplicationCommandOptionType.Integer, description: 'Texturizado %', required: false },
+                { name: 'iluminacion', type: ApplicationCommandOptionType.Integer, description: 'Iluminación %', required: false },
+                { name: 'presentacion', type: ApplicationCommandOptionType.Integer, description: 'Presentación %', required: false }
+            ]
+        },
+        {
+            name: 'literatura',
+            description: 'Evaluar Historia o Literatura',
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                { name: 'artista', type: ApplicationCommandOptionType.User, description: 'Escritor', required: true },
+                { name: 'foto', type: ApplicationCommandOptionType.Attachment, description: 'Captura del texto / Portada', required: true },
+                { name: 'lo_bueno', type: ApplicationCommandOptionType.String, description: 'Lo bueno', required: true },
+                { name: 'lo_malo', type: ApplicationCommandOptionType.String, description: 'Lo malo', required: true },
+                { name: 'resumen', type: ApplicationCommandOptionType.String, description: 'Resumen', required: true },
+                { name: 'positivo', type: ApplicationCommandOptionType.Integer, description: 'Positivo %', required: false },
+                { name: 'estructura', type: ApplicationCommandOptionType.Integer, description: 'Estructura/Ritmo %', required: false },
+                { name: 'personajes', type: ApplicationCommandOptionType.Integer, description: 'Personajes %', required: false },
+                { name: 'atmosfera', type: ApplicationCommandOptionType.Integer, description: 'Atmósfera %', required: false },
+                { name: 'prosa', type: ApplicationCommandOptionType.Integer, description: 'Prosa/Estilo %', required: false },
+                { name: 'desenlace', type: ApplicationCommandOptionType.Integer, description: 'Desenlace %', required: false }
+            ]
+        },
+        {
+            name: 'fotografia',
+            description: 'Evaluar una Fotografía',
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                { name: 'artista', type: ApplicationCommandOptionType.User, description: 'Fotógrafo', required: true },
+                { name: 'foto', type: ApplicationCommandOptionType.Attachment, description: 'Fotografía', required: true },
+                { name: 'lo_bueno', type: ApplicationCommandOptionType.String, description: 'Lo bueno', required: true },
+                { name: 'lo_malo', type: ApplicationCommandOptionType.String, description: 'Lo malo', required: true },
+                { name: 'resumen', type: ApplicationCommandOptionType.String, description: 'Resumen', required: true },
+                { name: 'positivo', type: ApplicationCommandOptionType.Integer, description: 'Positivo %', required: false },
+                { name: 'composicion', type: ApplicationCommandOptionType.Integer, description: 'Composición %', required: false },
+                { name: 'iluminacion', type: ApplicationCommandOptionType.Integer, description: 'Iluminación %', required: false },
+                { name: 'enfoque', type: ApplicationCommandOptionType.Integer, description: 'Enfoque/Nitidez %', required: false },
+                { name: 'color', type: ApplicationCommandOptionType.Integer, description: 'Color/Edición %', required: false },
+                { name: 'narrativa', type: ApplicationCommandOptionType.Narrativa || ApplicationCommandOptionType.Integer ? ApplicationCommandOptionType.Integer : 4, description: 'Narrativa %', required: false }
+            ]
+        }
     ]
 };
 
@@ -617,56 +678,81 @@ client.on('interactionCreate', async interaction => {
         }
         }
     
-            if (commandName === 'critica') {
-        if (interaction.user.id !== PEPO_ID) {
-            return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-        }
-        await interaction.deferReply();
-
+                if (commandName === 'critica') {
         try {
-            const artista = interaction.options.getUser('artista');
-            const foto = interaction.options.getAttachment('foto');
+            await interaction.deferReply();
+
+            // Identificar qué subcomando se ejecutó (arte, modelado, literatura, fotografia)
+            const sub = interaction.options.getSubcommand();
+
+            // Opciones comunes a todas las variantes
+            const artistaUser = interaction.options.getUser('artista');
+            const fotoAttachment = interaction.options.getAttachment('foto');
             const loBueno = interaction.options.getString('lo_bueno');
             const loMalo = interaction.options.getString('lo_malo');
             const resumen = interaction.options.getString('resumen');
-            const positivoPct = interaction.options.getInteger('positivo') ?? 70;
+            const positivoPct = interaction.options.getInteger('positivo') ?? 80;
 
-            const stats = [
-                { nombre: 'Lineart', val: interaction.options.getInteger('lineart') ?? 80 },
-                { nombre: 'Creatividad', val: interaction.options.getInteger('creatividad') ?? 85 },
-                { nombre: 'Detalles', val: interaction.options.getInteger('detalles') ?? 75 },
-                { nombre: 'Paleta', val: interaction.options.getInteger('paleta') ?? 90 },
-                { nombre: 'Pinceles', val: interaction.options.getInteger('pinceles') ?? 70 }
-            ];
+            let stats = [];
 
-            let datosArtista = await UserXP.findOne({ userId: artista.id, guildId: interaction.guild.id });
-            
-            const nombreCartel = datosArtista?.cartelEquipado || datosArtista?.cartelEquipada;
-            const fuenteNombre = datosArtista?.fuenteEquipada;
-            const nombreTabla = datosArtista?.tablaEquipada;
+            if (sub === 'arte') {
+                stats = [
+                    { nombre: 'Lineart', val: interaction.options.getInteger('lineart') ?? 80 },
+                    { nombre: 'Creatividad', val: interaction.options.getInteger('creatividad') ?? 85 },
+                    { nombre: 'Detalles', val: interaction.options.getInteger('detalles') ?? 75 },
+                    { nombre: 'Paleta', val: interaction.options.getInteger('paleta') ?? 90 },
+                    { nombre: 'Pinceles', val: interaction.options.getInteger('pinceles') ?? 70 }
+                ];
+            } else if (sub === 'modelado') {
+                stats = [
+                    { nombre: 'Topología', val: interaction.options.getInteger('topologia') ?? 80 },
+                    { nombre: 'Escultura', val: interaction.options.getInteger('escultura') ?? 85 },
+                    { nombre: 'Texturizado', val: interaction.options.getInteger('texturizado') ?? 75 },
+                    { nombre: 'Iluminación', val: interaction.options.getInteger('iluminacion') ?? 90 },
+                    { nombre: 'Presentación', val: interaction.options.getInteger('presentacion') ?? 70 }
+                ];
+            } else if (sub === 'literatura') {
+                stats = [
+                    { nombre: 'Estructura', val: interaction.options.getInteger('estructura') ?? 80 },
+                    { nombre: 'Personajes', val: interaction.options.getInteger('personajes') ?? 85 },
+                    { nombre: 'Atmósfera', val: interaction.options.getInteger('atmosfera') ?? 75 },
+                    { nombre: 'Prosa/Estilo', val: interaction.options.getInteger('prosa') ?? 90 },
+                    { nombre: 'Desenlace', val: interaction.options.getInteger('desenlace') ?? 70 }
+                ];
+            } else if (sub === 'fotografia') {
+                stats = [
+                    { nombre: 'Composición', val: interaction.options.getInteger('composicion') ?? 80 },
+                    { nombre: 'Iluminación', val: interaction.options.getInteger('iluminacion') ?? 85 },
+                    { nombre: 'Enfoque', val: interaction.options.getInteger('enfoque') ?? 75 },
+                    { nombre: 'Color/Edición', val: interaction.options.getInteger('color') ?? 90 },
+                    { nombre: 'Narrativa', val: interaction.options.getInteger('narrativa') ?? 70 }
+                ];
+            }
+
+            // Cargar datos de cosméticos del artista para renderizar
+            const guildId = interaction.guild.id;
+            let userXpData = await UserXP.findOne({ userId: artistaUser.id, guildId });
+            const nombreCartel = userXpData?.cartelEquipado;
+            const fuenteNombre = userXpData?.fuenteEquipada;
+            const nombreTabla = userXpData?.tablaEquipada;
 
             let urlFondoUsar = null;
             if (nombreCartel && nombreCartel !== 'Ninguno') {
-                const regexBg = new RegExp(`^${nombreCartel.trim()}$`, 'i');
-                const bgObj = await Background.findOne({ guildId: interaction.guild.id, nombreId: regexBg });
-                if (bgObj) {
-                    urlFondoUsar = bgObj.fondoUrl || bgObj.urlImagen || bgObj.imageUrl || bgObj.url;
-                }
+                const bgObj = await Background.findOne({ guildId, nombreId: new RegExp(`^${nombreCartel.trim()}$`, 'i') });
+                if (bgObj) urlFondoUsar = bgObj.fondoUrl || bgObj.urlImagen;
             }
 
             let urlTablaUsar = null;
             if (nombreTabla && nombreTabla !== 'Predeterminada') {
-                const regexTabla = new RegExp(`^${nombreTabla.trim()}$`, 'i');
-                const tablaObj = await Tabla.findOne({ guildId: interaction.guild.id, nombreId: regexTabla });
-                if (tablaObj) {
-                    urlTablaUsar = tablaObj.urlImagen || tablaObj.url || tablaObj.imageUrl;
-                }
+                const tablaObj = await Tabla.findOne({ guildId, nombreId: new RegExp(`^${nombreTabla.trim()}$`, 'i') });
+                if (tablaObj) urlTablaUsar = tablaObj.urlImagen || tablaObj.url;
             }
 
-            const bufferFicha = await generarTarjetaCritica({
-                dibujoUrl: foto.url,
-                artistaNombre: artista.username,
-                artistaAvatarUrl: artista.displayAvatarURL({ extension: 'png', size: 256 }),
+            // Generar el Canvas enviando el array 'stats' personalizado
+            const bufferTarjeta = await generarTarjetaCritica({
+                dibujoUrl: fotoAttachment.url,
+                artistaNombre: artistaUser.username,
+                artistaAvatarUrl: artistaUser.displayAvatarURL({ extension: 'png', size: 256 }),
                 loBueno,
                 loMalo,
                 resumen,
@@ -677,16 +763,15 @@ client.on('interactionCreate', async interaction => {
                 fuenteNombre
             });
 
-            const attachment = new AttachmentBuilder(bufferFicha, { name: `critica_${artista.username}.png` });
-            return await interaction.editReply({
-                content: `🎨 **EVALUACIÓN OFICIAL DE #SEMANAL PARA** <@${artista.id}>`,
-                files: [attachment]
-            });
-        } catch (error) {
-            console.error("❌ Error crítico en /critica:", error);
-            return await interaction.editReply('❌ Puchica maje, falló el renderizado de la crítica.');
+            const attachment = new AttachmentBuilder(bufferTarjeta, { name: `evaluacion_${artistaUser.username}.png` });
+            return await interaction.editReply({ files: [attachment] });
+
+        } catch (err) {
+            console.error("Error en /critica:", err);
+            if (interaction.deferred) await interaction.editReply(`❌ Error al generar la crítica: \`${err.message}\``);
         }
-            }
+                }
+    
         if (commandName === 'comprar') {
         await interaction.deferReply();
 
