@@ -973,29 +973,66 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
             }
 
-            // --- PREVISUALIZACIÓN DE FUENTE ---
+                        // --- PREVISUALIZACIÓN DE FUENTE ---
             if (opcion.startsWith('comprar_font_')) {
                 const fontId = opcion.replace('comprar_font_', '');
                 const fontObj = await Font.findOne({ guildId, nombreId: fontId });
                 if (!fontObj) return await interaction.editReply({ content: '❌ La fuente ya no existe alv.' });
 
+                // Cargamos la fuente desde su URL en Mongo para asegurarnos de que pinte bien
+                let fuenteRegistrada = 'sans-serif';
+                try {
+                    const resFont = await fetch(fontObj.fontUrl);
+                    if (resFont.ok) {
+                        const fontBuffer = Buffer.from(await resFont.arrayBuffer());
+                        GlobalFonts.register(fontBuffer, fontId);
+                        fuenteRegistrada = fontId;
+                    }
+                } catch (e) {
+                    console.error("Error cargando fuente en preview:", e);
+                }
+
                 const canvas = createCanvas(1000, 600);
                 const ctx = canvas.getContext('2d');
+                
+                // Fondo chido oscuro para la fuente
                 ctx.fillStyle = '#1a1035';
                 ctx.fillRect(0, 0, 1000, 600);
 
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                // Caja translúcida para los textos
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.beginPath();
-                ctx.roundRect(150, 220, 700, 160, 20);
+                ctx.roundRect(50, 40, 900, 520, 20);
                 ctx.fill();
 
+                // Título del artículo
                 ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 36px sans-serif';
-                ctx.fillText(`🔤 FUENTE: ${fontId.toUpperCase()}`, 190, 290);
+                ctx.font = 'bold 28px sans-serif';
+                ctx.fillText(`🔤 FUENTE: ${fontId.toUpperCase()}`, 90, 95);
 
                 ctx.fillStyle = '#E2E2E8';
-                ctx.font = '22px sans-serif';
-                ctx.fillText(`Precio: ${fontObj.precio} XP | Req. Nivel: ${fontObj.nivelMinimo ?? 1}`, 190, 335);
+                ctx.font = '18px sans-serif';
+                ctx.fillText(`Precio: ${fontObj.precio} XP | Req. Nivel: ${fontObj.nivelMinimo ?? 1}`, 90, 130);
+
+                // --- ABECEDARIO Y MUESTRA CON LA FUENTE NUEVA ---
+                ctx.fillStyle = '#FFFFFF';
+                
+                // Abecedario en mayúsculas
+                ctx.font = `32px "${fuenteRegistrada}", sans-serif`;
+                ctx.fillText("A B C D E F G H I J K L M N O P Q R S T U V W X Y Z", 90, 210);
+
+                // Abecedario en minúsculas
+                ctx.font = `32px "${fuenteRegistrada}", sans-serif`;
+                ctx.fillText("a b c d e f g h i j k l m n o p q r s t u v w x y z", 90, 280);
+
+                // Números y símbolos chingones
+                ctx.font = `32px "${fuenteRegistrada}", sans-serif`;
+                ctx.fillText("1 2 3 4 5 6 7 8 9 0  ! ? # $ @ & + - * /", 90, 350);
+
+                // Frase de prueba artística
+                ctx.fillStyle = '#00E5FF';
+                ctx.font = `26px "${fuenteRegistrada}", sans-serif`;
+                ctx.fillText("Plutus y Pepo armando el imperio del arte alv > :v", 90, 450);
 
                 const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_font_${fontId}.png` });
                 
@@ -1018,6 +1055,7 @@ client.on('interactionCreate', async interaction => {
 
                 return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
             }
+            
 
             // --- PREVISUALIZACIÓN DE PACK ---
             if (opcion.startsWith('comprar_pack_')) {
