@@ -270,15 +270,43 @@ async function generarTarjetaCritica({
         ctx.fillRect(0, 0, width, height);
     }
 
-    ctx.save();
-    ctx.fillStyle = 'rgba(15, 15, 20, 0.35)';
-    ctx.beginPath();
-    ctx.roundRect(20, 20, width - 40, height - 40, 20);
-    ctx.fill();
+        // Si hay tabla equipada, reemplazamos el panel oscuro por la imagen de la tabla
+    let tablaRenderizada = false;
+    if (tablaUrl) {
+        try {
+            const resTabla = await fetch(tablaUrl);
+            if (resTabla.ok) {
+                const bufTabla = Buffer.from(await resTabla.arrayBuffer());
+                const imgTabla = await loadImage(bufTabla);
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+                ctx.save();
+                ctx.beginPath();
+                // Coordenadas exactas que ocupaba el cuadro oscuro (X:20, Y:20, Ancho:960, Alto:560, Radio:20)
+                ctx.roundRect(20, 20, width - 40, height - 40, 20);
+                ctx.clip(); // Recorta la imagen para que respete los bordes redondeados
+                
+                ctx.drawImage(imgTabla, 20, 20, width - 40, height - 40);
+                ctx.restore();
+                tablaRenderizada = true;
+            }
+        } catch (e) {
+            console.error("⚠️ [CANVAS] Error cargando tabla:", e.message);
+        }
+    }
+
+    // Si no hay tabla o falló, ponemos el cuadro oscuro clásico de respaldo
+    if (!tablaRenderizada) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 15, 20, 0.75)';
+        ctx.beginPath();
+        ctx.roundRect(20, 20, width - 40, height - 40, 20);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
 
         if (tablaUrl) {
         try {
