@@ -18,8 +18,11 @@ const {
     ApplicationCommandOptionType,
     StringSelectMenuBuilder,
     ActionRowBuilder,
-    AttachmentBuilder
+    AttachmentBuilder,
+    ButtonBuilder,
+    ButtonStyle
 } = require('discord.js');
+
 const mongoose = require('mongoose');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 require('dotenv').config();
