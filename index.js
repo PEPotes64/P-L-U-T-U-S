@@ -67,6 +67,16 @@ const client = new Client({
         GatewayIntentBits.GuildMembers
     ]
 });
+const autoRoleMenuSchema = new mongoose.Schema({
+    guildId: { type: String, required: true },
+    nombreId: { type: String, required: true },
+    roles: [{ roleId: String, label: String, description: String }],
+    precio: { type: Number, default: 0 },
+    nivelMinimo: { type: Number, default: 1 },
+    propietarioId: { type: String, default: null }
+});
+const AutoRoleMenu = mongoose.models.AutoRoleMenu || mongoose.model('AutoRoleMenu', autoRoleMenuSchema);
+
 
 // TU ID EXCLUSIVA DE PEPO
 const PEPO_ID = '1259006426978713620';
