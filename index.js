@@ -1474,7 +1474,6 @@ client.on('interactionCreate', async interaction => {
         }
 
                 // --- MANEJADOR DE AUTOROLES ---
-        try {
         if (customId.startsWith('autorol_select_')) {
             const nombreId = customId.replace('autorol_select_', '');
             const roleIdSeleccionado = values[0];
@@ -1555,10 +1554,7 @@ client.on('interactionCreate', async interaction => {
             return await interaction.editReply({ content: `📦 ¡Te equipaste el pack combo **"${packId}"** con éxito!` });
         }
         }
-    } // <-- Esta llave es la que le falta al try de los autoroles
-} catch (err) {
-    console.error("Error en menús de selección de Plutus:", err);
-}
+    } 
 });
 
 
