@@ -1553,10 +1553,11 @@ client.on('interactionCreate', async interaction => {
             await userXpData.save();
             return await interaction.editReply({ content: `📦 ¡Te equipaste el pack combo **"${packId}"** con éxito!` });
         }
-    } catch (err) {
+        } catch (err) {
         console.error("Error en menús de selección de Plutus:", err);
     }
-});
+}); // <-- Este cierra el client.on de los selects
+
 
 // --- MANEJADOR DE BOTONES (COMPRAS Y CONFIRMACIONES) ---
 client.on('interactionCreate', async interaction => {
