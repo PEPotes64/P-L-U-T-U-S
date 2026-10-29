@@ -576,389 +576,266 @@ async function generarTarjetaCritica({
     return canvas.toBuffer('image/png');
 }
 
-// --- MANEJADOR DE COMANDOS SLASH ---
+// --- MANEJADOR UNIFICADO DE INTERACCIONES SLASH Y MENÚS ---
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
-    const { commandName } = interaction;
-
     try {
-        if (commandName === 'perfil') {
-            await interaction.deferReply({ ephemeral: true });
+        // 1. COMANDOS SLASH (/)
+        if (interaction.isChatInputCommand()) {
+            const { commandName } = interaction;
+
+            if (commandName === 'perfil') {
+                await interaction.deferReply({ ephemeral: true });
+                const userId = interaction.user.id;
+                const guildId = interaction.guild.id;
+
+                let userXpData = await UserXP.findOne({ userId, guildId });
+                const nivelUsuario = userXpData ? userXpData.level : 1;
+
+                const bgsComprados = userXpData?.cartelesComprados || [];
+                const bgsGratisLvl = await Background.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
+                const bgsPredeterminados = await Background.find({ guildId, precio: null, nivelMinimo: null });
+                const nombresBgsGratis = [...bgsGratisLvl, ...bgsPredeterminados].map(b => b.nombreId);
+                const todosMisFondos = [...new Set([...nombresBgsGratis, ...bgsComprados])];
+
+                const fuentesCompradas = userXpData?.fuentesCompradas || [];
+                const fuentesGratisLvl = await Font.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
+                const fuentesPredeterminadas = await Font.find({ guildId, precio: null, nivelMinimo: null });
+                const nombresFuentesGratis = [...fuentesGratisLvl, ...fuentesPredeterminadas].map(f => f.nombreId);
+                const todasMisFuentes = [...new Set([...nombresFuentesGratis, ...fuentesCompradas])];
+
+                const packsComprados = userXpData?.packsComprados || [];
+                const packsGratisLvl = await Pack.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
+                const packsPredeterminadas = await Pack.find({ guildId, precio: null, nivelMinimo: null });
+                const nombresPacksGratis = [...packsGratisLvl, ...packsPredeterminadas].map(p => p.nombreId);
+                const todosMisPacks = [...new Set([...nombresPacksGratis, ...packsComprados])];
+
+                const tablasCompradas = userXpData?.tablasCompradas || [];
+                const tablasGratisLvl = await Tabla.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
+                const tablasPredeterminadas = await Tabla.find({ guildId, precio: null, nivelMinimo: null });
+                const nombresTablasGratis = [...tablasGratisLvl, ...tablasPredeterminadas].map(t => t.nombreId);
+                const todasMisTablas = [...new Set([...nombresTablasGratis, ...tablasCompradas])];
+
+                const nombreCartel = userXpData?.cartelEquipado;
+                const fuenteNombre = userXpData?.fuenteEquipada;
+                const nombreTabla = userXpData?.tablaEquipada;
+
+                let urlFondoUsar = null;
+                if (nombreCartel && nombreCartel !== 'Ninguno') {
+                    const bgObj = await Background.findOne({ guildId, nombreId: new RegExp(`^${nombreCartel.trim()}$`, 'i') });
+                    if (bgObj) urlFondoUsar = bgObj.fondoUrl || bgObj.urlImagen;
+                }
+
+                let urlTablaUsar = null;
+                if (nombreTabla && nombreTabla !== 'Predeterminada') {
+                    const tablaObj = await Tabla.findOne({ guildId, nombreId: new RegExp(`^${nombreTabla.trim()}$`, 'i') });
+                    if (tablaObj) urlTablaUsar = tablaObj.urlImagen || tablaObj.url;
+                }
+
+                const bufferArmario = await generarTarjetaCritica({
+                    dibujoUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 256 }),
+                    artistaNombre: interaction.user.username,
+                    artistaAvatarUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 256 }),
+                    loBueno: "¡Tus cosméticos actuales combinan de pelos!",
+                    loMalo: "Ninguno, estás listo para triunfar alv.",
+                    resumen: "Vista previa de tu armario activo en Plutus.",
+                    fondoUrl: urlFondoUsar,
+                    tablaUrl: urlTablaUsar,
+                    positivoPct: 100,
+                    stats: [
+                        { nombre: 'Nivel', val: userXpData?.level || 1 },
+                        { nombre: 'XP', val: Math.min(100, userXpData?.xp || 10) },
+                        { nombre: 'Arte', val: 95 },
+                        { nombre: 'Estilo', val: 90 },
+                        { nombre: 'Facha', val: 100 }
+                    ],
+                    fuenteNombre
+                });
+
+                const attachment = new AttachmentBuilder(bufferArmario, { name: `perfil_${interaction.user.username}.png` });
+                const perfilEmbed = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`🎨 Armario y Tarjeta Activa de ${interaction.user.username}`)
+                    .setDescription('Así es como se ve tu tarjeta actualmente con tus cosméticos equipados.')
+                    .setImage(`attachment://perfil_${interaction.user.username}.png`);
+
+                const componentes = [];
+                if (todosMisFondos.length > 0) {
+                    componentes.push(new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('equipar_cartel_menu').setPlaceholder('🖼️ Elegí un Fondo...').addOptions(todosMisFondos.map(c => ({ label: `Fondo: ${c}`, value: `equipar_cartel_${c}`, emoji: '🖼️' })))
+                    ));
+                }
+                if (todasMisFuentes.length > 0) {
+                    componentes.push(new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('equipar_fuente_menu').setPlaceholder('🔤 Elegí una Fuente...').addOptions(todasMisFuentes.map(f => ({ label: `Fuente: ${f}`, value: `equipar_fuente_${f}`, emoji: '🔤' })))
+                    ));
+                }
+                if (todosMisPacks.length > 0) {
+                    componentes.push(new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('equipar_pack_menu').setPlaceholder('📦 Elegí un Pack Combo...').addOptions(todosMisPacks.map(p => ({ label: `Pack: ${p}`, value: `equipar_pack_${p}`, emoji: '📦' })))
+                    ));
+                }
+                if (todasMisTablas.length > 0) {
+                    componentes.push(new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('equipar_tabla_menu').setPlaceholder('🪞 Elegí una Tabla...').addOptions(todasMisTablas.map(t => ({ label: `Tabla: ${t}`, value: `equipar_tabla_${t}`, emoji: '🪞' })))
+                    ));
+                }
+
+                return await interaction.editReply({ embeds: [perfilEmbed], files: [attachment], components: componentes });
+            }
+
+            if (commandName === 'setauto') {
+                if (interaction.user.id !== PEPO_ID) {
+                    return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
+                }
+                
+                await interaction.deferReply({ ephemeral: true });
+
+                const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
+                const precio = interaction.options.getInteger('precio') || 0;
+                const nivelMinimo = interaction.options.getInteger('nivel') || 1;
+                const panaUser = interaction.options.getUser('pana');
+                const propietarioId = panaUser ? panaUser.id : null;
+
+                const rolesArray = [];
+                for (let i = 1; i <= 10; i++) {
+                    const rol = interaction.options.getRole(`rol${i}`);
+                    if (rol) {
+                        rolesArray.push({
+                            roleId: rol.id,
+                            label: rol.name,
+                            description: `Obtener el rol ${rol.name}`
+                        });
+                    }
+                }
+
+                if (rolesArray.length === 0) {
+                    return await interaction.editReply({ content: '❌ Debes agregar al menos un rol al menú.' });
+                }
+
+                await AutoRoleMenu.findOneAndUpdate(
+                    { guildId: interaction.guild.id, nombreId },
+                    { guildId: interaction.guild.id, nombreId, roles: rolesArray, precio, nivelMinimo, propietarioId },
+                    { upsert: true, new: true }
+                );
+
+                const tipoTexto = propietarioId ? `🔒 Exclusivo para <@${propietarioId}>` : `🌐 Público (Para todos)`;
+                return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
+            }
+
+            if (commandName === 'autorol') {
+                const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
+                const guildId = interaction.guild.id;
+                const userId = interaction.user.id;
+
+                const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
+                if (!menuData) {
+                    return await interaction.reply({ content: `❌ No existe ningún menú de autorol con el nombre \`${nombreId}\` alv.`, ephemeral: true });
+                }
+
+                if (menuData.propietarioId && menuData.propietarioId !== userId) {
+                    return await interaction.reply({ content: `❌ Este menú de autoroles es exclusivo y pertenece a otro usuario alv.`, ephemeral: true });
+                }
+
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId(`autorol_select_${menuData.nombreId}`)
+                    .setPlaceholder(`📂 Selecciona un rol del menú: ${menuData.nombreId}`)
+                    .addOptions(
+                        menuData.roles.map(r => ({
+                            label: r.label,
+                            value: r.roleId,
+                            description: `Reclamar rol ${r.label}`,
+                            emoji: '✨'
+                        }))
+                    );
+
+                const row = new ActionRowBuilder().addComponents(selectMenu);
+                const embed = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`✨ Menú de Autoroles: ${menuData.nombreId.toUpperCase()}`)
+                    .setDescription(`Usa el menú desplegable de abajo para equiparte/obtener el rol.\n\n• **Precio:** ${menuData.precio > 0 ? `${menuData.precio} XP` : 'Gratis'}\n• **Nivel Mínimo:** ${menuData.nivelMinimo}`);
+
+                return await interaction.reply({ embeds: [embed], components: [row] });
+            }
+        }
+
+        // 2. MENÚS DESPLEGABLES (SELECT MENUS)
+        if (interaction.isStringSelectMenu()) {
+            const { customId, values } = interaction;
             const userId = interaction.user.id;
             const guildId = interaction.guild.id;
 
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            const nivelUsuario = userXpData ? userXpData.level : 1;
+            if (customId.startsWith('autorol_select_')) {
+                const nombreId = customId.replace('autorol_select_', '');
+                const roleIdSeleccionado = values[0];
 
-            const bgsComprados = userXpData?.cartelesComprados || [];
-            const bgsGratisLvl = await Background.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
-            const bgsPredeterminados = await Background.find({ guildId, precio: null, nivelMinimo: null });
-            const nombresBgsGratis = [...bgsGratisLvl, ...bgsPredeterminados].map(b => b.nombreId);
-            const todosMisFondos = [...new Set([...nombresBgsGratis, ...bgsComprados])];
+                const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
+                if (!menuData) return await interaction.reply({ content: '❌ Este menú ya no existe alv.', ephemeral: true });
 
-            const fuentesCompradas = userXpData?.fuentesCompradas || [];
-            const fuentesGratisLvl = await Font.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
-            const fuentesPredeterminadas = await Font.find({ guildId, precio: null, nivelMinimo: null });
-            const nombresFuentesGratis = [...fuentesGratisLvl, ...fuentesPredeterminadas].map(f => f.nombreId);
-            const todasMisFuentes = [...new Set([...nombresFuentesGratis, ...fuentesCompradas])];
+                let userXpData = await UserXP.findOne({ userId, guildId });
+                const nivelUsuario = userXpData ? userXpData.level : 1;
+                const xpUsuario = userXpData ? userXpData.xp : 0;
 
-            const packsComprados = userXpData?.packsComprados || [];
-            const packsGratisLvl = await Pack.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
-            const packsPredeterminadas = await Pack.find({ guildId, precio: null, nivelMinimo: null });
-            const nombresPacksGratis = [...packsGratisLvl, ...packsPredeterminadas].map(p => p.nombreId);
-            const todosMisPacks = [...new Set([...nombresPacksGratis, ...packsComprados])];
+                if (nivelUsuario < menuData.nivelMinimo) {
+                    return await interaction.reply({ content: `❌ Necesitas ser **Nivel ${menuData.nivelMinimo}** para reclamar este rol.`, ephemeral: true });
+                }
 
-            const tablasCompradas = userXpData?.tablasCompradas || [];
-            const tablasGratisLvl = await Tabla.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
-            const tablasPredeterminadas = await Tabla.find({ guildId, precio: null, nivelMinimo: null });
-            const nombresTablasGratis = [...tablasGratisLvl, ...tablasPredeterminadas].map(t => t.nombreId);
-            const todasMisTablas = [...new Set([...nombresTablasGratis, ...tablasCompradas])];
+                if (menuData.precio > 0 && xpUsuario < menuData.precio) {
+                    return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP**.`, ephemeral: true });
+                }
 
-            const nombreCartel = userXpData?.cartelEquipado;
-            const fuenteNombre = userXpData?.fuenteEquipada;
-            const nombreTabla = userXpData?.tablaEquipada;
-
-            let urlFondoUsar = null;
-            if (nombreCartel && nombreCartel !== 'Ninguno') {
-                const regexBg = new RegExp(`^${nombreCartel.trim()}$`, 'i');
-                const bgObj = await Background.findOne({ guildId, nombreId: regexBg });
-                if (bgObj) {
-                    urlFondoUsar = bgObj.fondoUrl || bgObj.urlImagen;
+                const member = interaction.member;
+                if (member.roles.cache.has(roleIdSeleccionado)) {
+                    await member.roles.remove(roleIdSeleccionado);
+                    return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}>.`, ephemeral: true });
+                } else {
+                    if (menuData.precio > 0) {
+                        userXpData.xp -= menuData.precio;
+                        await userXpData.save();
+                    }
+                    await member.roles.add(roleIdSeleccionado);
+                    return await interaction.reply({ content: `✅ ¡Te has equipado el rol <@&${roleIdSeleccionado}> con éxito!`, ephemeral: true });
                 }
             }
 
-            let urlTablaUsar = null;
-            if (nombreTabla && nombreTabla !== 'Predeterminada') {
-                const regexTabla = new RegExp(`^${nombreTabla.trim()}$`, 'i');
-                const tablaObj = await Tabla.findOne({ guildId, nombreId: regexTabla });
-                if (tablaObj) {
-                    urlTablaUsar = tablaObj.urlImagen || tablaObj.url;
+            if (customId.startsWith('equipar_')) {
+                await interaction.deferReply({ ephemeral: true });
+                let userXpData = await UserXP.findOne({ userId, guildId });
+                if (!userXpData) userXpData = new UserXP({ userId, guildId });
+
+                if (customId === 'equipar_tabla_menu') {
+                    userXpData.tablaEquipada = values[0].replace('equipar_tabla_', '').trim();
+                } else if (customId === 'equipar_cartel_menu') {
+                    userXpData.cartelEquipado = values[0].replace('equipar_cartel_', '');
+                } else if (customId === 'equipar_fuente_menu') {
+                    userXpData.fuenteEquipada = values[0].replace('equipar_fuente_', '');
+                } else if (customId === 'equipar_pack_menu') {
+                    const packObj = await Pack.findOne({ guildId, nombreId: values[0].replace('equipar_pack_', '') });
+                    if (packObj) {
+                        userXpData.cartelEquipado = packObj.fondoNombreId;
+                        userXpData.fuenteEquipada = packObj.fuenteNombreId;
+                    }
                 }
+                await userXpData.save();
+                return await interaction.editReply({ content: `✅ ¡Cosmético equipado con éxito alv!` });
             }
-
-            const bufferArmario = await generarTarjetaCritica({
-                dibujoUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 256 }),
-                artistaNombre: interaction.user.username,
-                artistaAvatarUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 256 }),
-                loBueno: "¡Tus cosméticos actuales combinan de pelos!",
-                loMalo: "Ninguno, estás listo para triunfar alv.",
-                resumen: "Vista previa de tu armario activo en Plutus.",
-                fondoUrl: urlFondoUsar,
-                tablaUrl: urlTablaUsar,
-                positivoPct: 100,
-                stats: [
-                    { nombre: 'Nivel', val: userXpData?.level || 1 },
-                    { nombre: 'XP', val: Math.min(100, userXpData?.xp || 10) },
-                    { nombre: 'Arte', val: 95 },
-                    { nombre: 'Estilo', val: 90 },
-                    { nombre: 'Facha', val: 100 }
-                ],
-                fuenteNombre
-            });
-
-            const attachment = new AttachmentBuilder(bufferArmario, { name: `perfil_${interaction.user.username}.png` });
-
-            const perfilEmbed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle(`🎨 Armario y Tarjeta Activa de ${interaction.user.username}`)
-                .setDescription('Así es como se ve tu tarjeta actualmente con tus cosméticos equipados. Elegí abajo qué cambiar o equipar.')
-                .addFields(
-                    { name: '🌅 Fondo Equipado:', value: `\`${nombreCartel || 'Ninguno'}\``, inline: true },
-                    { name: '🪞 Tabla Equipada:', value: `\`${nombreTabla || 'Predeterminada'}\``, inline: true },
-                    { name: '🔤 Fuente Equipada:', value: `\`${fuenteNombre || 'Predeterminada'}\``, inline: true }
-                )
-                .setImage(`attachment://perfil_${interaction.user.username}.png`)
-                .setFooter({ text: 'Plutus • Tesorería y Arte', iconURL: client.user.displayAvatarURL() });
-
-            const componentes = [];
-
-            if (todosMisFondos.length > 0) {
-                const menuBgs = new StringSelectMenuBuilder()
-                    .setCustomId('equipar_cartel_menu')
-                    .setPlaceholder('🖼️ Elegí un Fondo para equipar...')
-                    .addOptions(todosMisFondos.map(c => ({ label: `Fondo: ${c}`, value: `equipar_cartel_${c}`, emoji: '🖼️' })));
-                componentes.push(new ActionRowBuilder().addComponents(menuBgs));
-            }
-
-            if (todasMisFuentes.length > 0) {
-                const menuFonts = new StringSelectMenuBuilder()
-                    .setCustomId('equipar_fuente_menu')
-                    .setPlaceholder('🔤 Elegí una Fuente para equipar...')
-                    .addOptions(todasMisFuentes.map(f => ({ label: `Fuente: ${f}`, value: `equipar_fuente_${f}`, emoji: '🔤' })));
-                componentes.push(new ActionRowBuilder().addComponents(menuFonts));
-            }
-
-            if (todosMisPacks.length > 0) {
-                const menuPacks = new StringSelectMenuBuilder()
-                    .setCustomId('equipar_pack_menu')
-                    .setPlaceholder('📦 Elegí un Pack Combo para equipar...')
-                    .addOptions(todosMisPacks.map(p => ({ label: `Pack Combo: ${p}`, value: `equipar_pack_${p}`, emoji: '📦' })));
-                componentes.push(new ActionRowBuilder().addComponents(menuPacks));
-            }
-
-            if (todasMisTablas.length > 0) {
-                const menuTablas = new StringSelectMenuBuilder()
-                    .setCustomId('equipar_tabla_menu')
-                    .setPlaceholder('🪞 Elegí una Tabla para equipar...')
-                    .addOptions(todasMisTablas.map(t => ({ label: `Tabla: ${t}`, value: `equipar_tabla_${t}`, emoji: '🪞' })));
-                componentes.push(new ActionRowBuilder().addComponents(menuTablas));
-            }
-            
-            return await interaction.editReply({ embeds: [perfilEmbed], files: [attachment], components: componentes });
         }
 
-        if (commandName === 'critica') {
-            await interaction.deferReply();
-
-            const sub = interaction.options.getSubcommand();
-            const artistaUser = interaction.options.getUser('artista');
-            const fotoAttachment = interaction.options.getAttachment('foto');
-            const loBueno = interaction.options.getString('lo_bueno');
-            const loMalo = interaction.options.getString('lo_malo');
-            const resumen = interaction.options.getString('resumen');
-            const positivoPct = interaction.options.getInteger('positivo') ?? 80;
-
-            let stats = [];
-
-            if (sub === 'arte') {
-                stats = [
-                    { nombre: 'Lineart', val: interaction.options.getInteger('lineart') ?? 80 },
-                    { nombre: 'Creatividad', val: interaction.options.getInteger('creatividad') ?? 85 },
-                    { nombre: 'Detalles', val: interaction.options.getInteger('detalles') ?? 75 },
-                    { nombre: 'Paleta', val: interaction.options.getInteger('paleta') ?? 90 },
-                    { nombre: 'Pinceles', val: interaction.options.getInteger('pinceles') ?? 70 }
-                ];
-            } else if (sub === 'modelado') {
-                stats = [
-                    { nombre: 'Topología', val: interaction.options.getInteger('topologia') ?? 80 },
-                    { nombre: 'Escultura', val: interaction.options.getInteger('escultura') ?? 85 },
-                    { nombre: 'Texturizado', val: interaction.options.getInteger('texturizado') ?? 75 },
-                    { nombre: 'Iluminación', val: interaction.options.getInteger('iluminacion') ?? 90 },
-                    { nombre: 'Presentación', val: interaction.options.getInteger('presentacion') ?? 70 }
-                ];
-            } else if (sub === 'literatura') {
-                stats = [
-                    { nombre: 'Estructura', val: interaction.options.getInteger('estructura') ?? 80 },
-                    { nombre: 'Personajes', val: interaction.options.getInteger('personajes') ?? 85 },
-                    { nombre: 'Atmósfera', val: interaction.options.getInteger('atmosfera') ?? 75 },
-                    { nombre: 'Prosa/Estilo', val: interaction.options.getInteger('prosa') ?? 90 },
-                    { nombre: 'Desenlace', val: interaction.options.getInteger('desenlace') ?? 70 }
-                ];
-            } else if (sub === 'fotografia') {
-                stats = [
-                    { nombre: 'Composición', val: interaction.options.getInteger('composicion') ?? 80 },
-                    { nombre: 'Iluminación', val: interaction.options.getInteger('iluminacion') ?? 85 },
-                    { nombre: 'Enfoque', val: interaction.options.getInteger('enfoque') ?? 75 },
-                    { nombre: 'Color/Edición', val: interaction.options.getInteger('color') ?? 90 },
-                    { nombre: 'Narrativa', val: interaction.options.getInteger('narrativa') ?? 70 }
-                ];
+        // 3. BOTONES
+        if (interaction.isButton()) {
+            const { customId } = interaction;
+            if (customId === 'cancelar_compra') {
+                return await interaction.update({ content: '❌ Compra cancelada alv.', embeds: [], files: [], components: [] });
             }
-
-            const guildId = interaction.guild.id;
-            let userXpData = await UserXP.findOne({ userId: artistaUser.id, guildId });
-            const nombreCartel = userXpData?.cartelEquipado;
-            const fuenteNombre = userXpData?.fuenteEquipada;
-            const nombreTabla = userXpData?.tablaEquipada;
-
-            let urlFondoUsar = null;
-            if (nombreCartel && nombreCartel !== 'Ninguno') {
-                const bgObj = await Background.findOne({ guildId, nombreId: new RegExp(`^${nombreCartel.trim()}$`, 'i') });
-                if (bgObj) urlFondoUsar = bgObj.fondoUrl || bgObj.urlImagen;
-            }
-
-            let urlTablaUsar = null;
-            if (nombreTabla && nombreTabla !== 'Predeterminada') {
-                const tablaObj = await Tabla.findOne({ guildId, nombreId: new RegExp(`^${nombreTabla.trim()}$`, 'i') });
-                if (tablaObj) urlTablaUsar = tablaObj.urlImagen || tablaObj.url;
-            }
-
-            const bufferTarjeta = await generarTarjetaCritica({
-                dibujoUrl: fotoAttachment.url,
-                artistaNombre: artistaUser.username,
-                artistaAvatarUrl: artistaUser.displayAvatarURL({ extension: 'png', size: 256 }),
-                loBueno,
-                loMalo,
-                resumen,
-                fondoUrl: urlFondoUsar,
-                tablaUrl: urlTablaUsar,
-                positivoPct,
-                stats,
-                fuenteNombre
-            });
-
-            const attachment = new AttachmentBuilder(bufferTarjeta, { name: `evaluacion_${artistaUser.username}.png` });
-            return await interaction.editReply({ files: [attachment] });
         }
-
-        if (commandName === 'comprar') {
-            await interaction.deferReply();
-
-            const fondosTienda = await Background.find({ guildId: interaction.guild.id, precio: { $ne: null } });
-            const fuentesTienda = await Font.find({ guildId: interaction.guild.id, precio: { $ne: null } });
-            const packsTienda = await Pack.find({ guildId: interaction.guild.id, precio: { $ne: null } });
-            const tablasTienda = await Tabla.find({ guildId: interaction.guild.id, precio: { $ne: null } });
-            
-            const tiendaEmbed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
-                .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs y tablas exclusivas.');
-
-            const opcionesMenu = [];
-
-            fondosTienda.forEach(f => {
-                tiendaEmbed.addFields({
-                    name: `🖼️ Fondo: ${f.nombreId} (${f.precio} XP)`,
-                    value: `Nivel Mínimo: ${f.nivelMinimo ?? 'Ninguno'}`
-                });
-                opcionesMenu.push({
-                    label: `Fondo: ${f.nombreId} (${f.precio} XP)`,
-                    description: `Req. Nivel ${f.nivelMinimo ?? 1}`,
-                    value: `comprar_bg_${f.nombreId}`,
-                    emoji: '🖼️'
-                });
-            });
-
-            fuentesTienda.forEach(fu => {
-                tiendaEmbed.addFields({
-                    name: `🔤 Fuente: ${fu.nombreId} (${fu.precio} XP)`,
-                    value: `Nivel Mínimo: ${fu.nivelMinimo ?? 'Ninguno'}`
-                });
-                opcionesMenu.push({
-                    label: `Fuente: ${fu.nombreId} (${fu.precio} XP)`,
-                    description: `Req. Nivel ${fu.nivelMinimo ?? 1}`,
-                    value: `comprar_font_${fu.nombreId}`,
-                    emoji: '🔤'
-                });
-            });
-
-            packsTienda.forEach(p => {
-                tiendaEmbed.addFields({
-                    name: `📦 Pack: ${p.nombreId} (${p.precio} XP)`,
-                    value: `Nivel Mínimo: ${p.nivelMinimo ?? 'Ninguno'}`
-                });
-                opcionesMenu.push({
-                    label: `Pack: ${p.nombreId} (${p.precio} XP)`,
-                    description: `Req. Nivel ${p.nivelMinimo ?? 1}`,
-                    value: `comprar_pack_${p.nombreId}`,
-                    emoji: '📦'
-                });
-            });
-
-            tablasTienda.forEach(t => {
-                tiendaEmbed.addFields({
-                    name: `🪞 Tabla: ${t.nombreId} (${t.precio} XP)`,
-                    value: `Nivel Mínimo: ${t.nivelMinimo ?? 'Ninguno'}`
-                });
-                opcionesMenu.push({
-                    label: `Tabla: ${t.nombreId} (${t.precio} XP)`,
-                    description: `Req. Nivel ${t.nivelMinimo ?? 1}`,
-                    value: `comprar_tabla_${t.nombreId}`,
-                    emoji: '🪞'
-                });
-            });
-
-            if (opcionesMenu.length === 0) {
-                tiendaEmbed.addFields({ name: '⚠️ Tienda Vacía', value: 'Pepo todavía no ha subido cosméticos a la tienda.' });
-                return await interaction.editReply({ embeds: [tiendaEmbed] });
-            }
-
-            const menuSelec = new StringSelectMenuBuilder()
-                .setCustomId('tienda_menu')
-                .setPlaceholder('Elegí un cosmético para comprar...')
-                .addOptions(opcionesMenu);
-
-            const fila = new ActionRowBuilder().addComponents(menuSelec);
-            return await interaction.editReply({ embeds: [tiendaEmbed], components: [fila] });
-        }
-
-        if (commandName === 'setpack') {
-            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-            await interaction.deferReply({ ephemeral: true });
-
-            const nombrePack = interaction.options.getString('nombre_pack').toLowerCase().trim();
-            const fondoId = interaction.options.getString('fondo_id').toLowerCase().trim();
-            const fuenteId = interaction.options.getString('fuente_id').toLowerCase().trim();
-            const precio = interaction.options.getInteger('precio');
-            const nivel = interaction.options.getInteger('nivel');
-
-            await Pack.findOneAndUpdate(
-                { guildId: interaction.guild.id, nombreId: nombrePack },
-                { fondoNombreId: fondoId, fuenteNombreId: fuenteId, precio: precio ?? null, nivelMinimo: nivel ?? null },
-                { upsert: true, new: true }
-            );
-            return await interaction.editReply(`📦 ¡Pack Combo **"${nombrePack}"** creado con éxito!`);
-        }
-
-        if (commandName === 'setfont') {
-            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-            await interaction.deferReply({ ephemeral: true });
-
-            const nombreId = interaction.options.getString('nombre_id').toLowerCase().trim();
-            const archivo = interaction.options.getAttachment('archivo');
-            const precio = interaction.options.getInteger('precio');
-            const nivel = interaction.options.getInteger('nivel');
-
-            const response = await fetch(archivo.url);
-            const buffer = Buffer.from(await response.arrayBuffer());
-            GlobalFonts.register(buffer, nombreId);
-
-            await Font.findOneAndUpdate(
-                { guildId: interaction.guild.id, nombreId },
-                { fontUrl: archivo.url, precio: precio ?? null, nivelMinimo: nivel ?? null },
-                { upsert: true, new: true }
-            );
-            return await interaction.editReply(`✅ ¡Fuente **"${nombreId}"** registrada con éxito!`);
-        }
-
-        if (commandName === 'setbg') {
-            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-            await interaction.deferReply({ ephemeral: true });
-
-            const nombreInput = interaction.options.getString('nombre') || interaction.options.getString('nombre_id');
-            const nombreId = nombreInput.toLowerCase().trim();
-            const urlImagen = interaction.options.getAttachment('imagen').url;
-            const precio = interaction.options.getInteger('precio') || null;
-            const nivelMinimo = interaction.options.getInteger('nivel') || null;
-
-            await Background.findOneAndUpdate(
-                { guildId: interaction.guild.id, nombreId },
-                { guildId: interaction.guild.id, nombreId, fondoUrl: urlImagen, urlImagen, precio, nivelMinimo },
-                { upsert: true, new: true }
-            );
-            return await interaction.editReply(`✅ ¡Fondo **"${nombreId}"** guardado en Mongo al centavo!`);
-        }
-
-        if (commandName === 'delbg') {
-            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-            await interaction.deferReply({ ephemeral: true });
-
-            const nombreId = interaction.options.getString('nombre_id').toLowerCase().trim();
-            await Background.findOneAndDelete({ guildId: interaction.guild.id, nombreId: new RegExp(`^${nombreId}$`, 'i') });
-            return await interaction.editReply(`🗑️ ¡Fondo **"${nombreId}"** eliminado!`);
-        }
-
-                if (commandName === 'settabla') {
-            if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
-            await interaction.deferReply({ ephemeral: true });
-
-            const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
-            const urlImagen = interaction.options.getAttachment('imagen').url;
-            const precio = interaction.options.getInteger('precio') || null;
-            const nivelMinimo = interaction.options.getInteger('nivel') || null;
-
-            await Tabla.findOneAndUpdate(
-                { guildId: interaction.guild.id, nombreId },
-                { urlImagen, precio, nivelMinimo },
-                { upsert: true, new: true }
-            );
-            return await interaction.editReply(`✅ ¡Tabla **"${nombreId}"** guardada con éxito!`);
-        } // <--- AQUÍ SE CIERRA BIEN EL IF DE SETTABLA ALV
 
     } catch (err) {
-        console.error("Error crítico en manejador de comandos slash:", err);
+        console.error("Error crítico en interactionCreate alv:", err);
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: `❌ Ocurrió un error al procesar tu comando: \`${err.message}\``, ephemeral: true }).catch(() => {});
+        }
     }
 });
+                    
 
 // --- MANEJADOR DE SELECCIONES DE LA TIENDA Y MENÚS ---
 client.on('interactionCreate', async interaction => {
