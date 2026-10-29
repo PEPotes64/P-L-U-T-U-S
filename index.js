@@ -875,14 +875,15 @@ client.on('interactionCreate', async interaction => {
         if (customId === 'tienda_menu') {
             const opcion = values[0];
 
-            // Previsualización de Fondos con Canvas
-
                         if (opcion.startsWith('comprar_pack_')) {
                 const packId = opcion.replace('comprar_pack_', '');
-                const packObj = await Pack.findOne({ guildId, nombreId: packId });
-                if (!packObj) return await interaction.reply({ content: '❌ El pack ya no existe alv.', ephemeral: true });
+                
+                // 1. Evitamos el timeout de Discord con deferReply
+                await interaction.deferReply({ ephemeral: true });
 
-                // Buscamos el fondo del pack para usarlo de base en el canvas
+                const packObj = await Pack.findOne({ guildId, nombreId: packId });
+                if (!packObj) return await interaction.editReply({ content: '❌ El pack ya no existe alv.' });
+
                 const bgObj = await Background.findOne({ guildId, nombreId: packObj.fondoNombreId });
                 const fontName = packObj.fuenteNombreId || 'sans-serif';
 
@@ -905,7 +906,6 @@ client.on('interactionCreate', async interaction => {
                     ctx.fillRect(0, 0, 1000, 600);
                 }
 
-                // Panel decorativo con la fuente del pack si está registrada
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.beginPath();
                 ctx.roundRect(100, 200, 800, 200, 20);
@@ -934,8 +934,10 @@ client.on('interactionCreate', async interaction => {
                         .setStyle(ButtonStyle.Success)
                 );
 
-                return await interaction.reply({ embeds: [embedPreview], files: [attachment], components: [botonComprar], ephemeral: true });
-             }
+                // 2. Usamos editReply obligatoriamente para que no falle
+                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botonComprar] });
+        }
+                    
 
             // Compra directa para fuentes, packs y tablas por ahora
             if (opcion.startsWith('comprar_font_')) {
