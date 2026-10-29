@@ -162,7 +162,6 @@ const dataTabla = {
 const dataLimpiar = {
     name: 'limpiar',
     description: 'Borra todas las fuentes y tablas de Mongo (Exclusivo Pepo)'
-    ]
 };
 
 client.once('ready', async () => {
