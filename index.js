@@ -1412,6 +1412,8 @@ client.on('interactionCreate', async interaction => {
 // --- MANEJADOR DE BOTONES (COMPRAS Y CONFIRMACIONES) ---
 client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
+    
+    console.log(`🔍 Comando ejecutado: "${interaction.commandName}" por ${interaction.user.tag}`);
 
     const { customId } = interaction;
 
