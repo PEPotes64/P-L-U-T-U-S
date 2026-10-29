@@ -308,7 +308,7 @@ async function generarTarjetaCritica({
         ctx.restore();
     }
 
-        if (tablaUrl) {
+            if (tablaUrl) {
         try {
             const resTabla = await fetch(tablaUrl);
             if (resTabla.ok) {
@@ -316,17 +316,15 @@ async function generarTarjetaCritica({
                 const imgTabla = await loadImage(bufTabla);
 
                 ctx.save();
-                ctx.globalCompositeOperation = 'source-over'; // O 'screen' si quieres que sea translúcida
+                ctx.globalCompositeOperation = 'source-over';
                 ctx.globalAlpha = 0.90;
-                // Aquí defines exactamente DÓNDE y QUÉ TAN GRANDE va la tabla (X, Y, Ancho, Alto)
-                // Por ejemplo, para que tape solo el recuérdalo de texto de la derecha:
                 ctx.drawImage(imgTabla, 450, 120, 510, 390);
                 ctx.restore();
             }
         } catch (e) {
             console.error("⚠️ [CANVAS] Error cargando tabla:", e.message);
         }
-     }
+            }
     
     ctx.restore();
 
