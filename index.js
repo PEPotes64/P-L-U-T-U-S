@@ -824,12 +824,24 @@ client.on('interactionCreate', async interaction => {
             if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
             const xpTotalActual = obtenerXpTotal(userXpData);
 
+                    if (interaction.isButton()) {
+            const { customId } = interaction;
+            const userId = interaction.user.id;
+            const guildId = interaction.guild.id;
+
+            // 1. ¡Evitamos que se quede pensando de inmediato!
+            await interaction.deferUpdate().catch(() => {});
+
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
+            const xpTotalActual = obtenerXpTotal(userXpData);
+
             if (customId.startsWith('exec_comprar_pack_')) {
                 const packId = customId.replace('exec_comprar_pack_', '');
                 const packObj = await Pack.findOne({ guildId, nombreId: packId });
-                if (!packObj) return await interaction.reply({ content: '❌ El pack ya no existe.', ephemeral: true });
-                if (packObj.nivelMinimo && userXpData.level < packObj.nivelMinimo) return await interaction.reply({ content: `❌ Requiere Nivel ${packObj.nivelMinimo}.`, ephemeral: true });
-                if (xpTotalActual < packObj.precio) return await interaction.reply({ content: `❌ Necesitás ${packObj.precio} XP.`, ephemeral: true });
+                if (!packObj) return await interaction.followUp({ content: '❌ El pack ya no existe alv.', ephemeral: true });
+                if (packObj.nivelMinimo && userXpData.level < packObj.nivelMinimo) return await interaction.followUp({ content: `❌ Requiere Nivel ${packObj.nivelMinimo}.`, ephemeral: true });
+                if (xpTotalActual < packObj.precio) return await interaction.followUp({ content: `❌ Necesitás ${packObj.precio} XP.`, ephemeral: true });
 
                 recalcularProgreso(userXpData, xpTotalActual - packObj.precio);
                 if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
@@ -843,7 +855,9 @@ client.on('interactionCreate', async interaction => {
                 userXpData.cartelEquipado = packObj.fondoNombreId;
                 userXpData.fuenteEquipada = packObj.fuenteNombreId;
                 await userXpData.save();
-                return await interaction.update({ content: `📦 ¡Compraste y equipaste el pack combo **${packId}** con éxito alv!`, embeds: [], components: [] });
+                
+                // Usamos editReply para actualizar el mensaje de la vista previa limpio
+                return await interaction.editReply({ content: `📦 ¡Compraste y equipaste el pack combo **${packId}** con éxito alv!`, embeds: [], components: [] });
             }
 
             if (customId.startsWith('exec_comprar_bg_')) {
