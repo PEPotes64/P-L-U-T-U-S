@@ -1426,7 +1426,7 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply({ content: `📦 ¡Compra exitosa! Te compraste y equipaste el pack combo **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
             }
 
-            if (tipo === 'tabla') {
+                        if (tipo === 'tabla') {
                 const tablaObj = await Tabla.findOne({ guildId, nombreId: itemId });
                 if (!tablaObj || xpTotalActual < tablaObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la tabla ya no existe.', ephemeral: true });
 
@@ -1447,3 +1447,4 @@ console.log('🔌 Conectando bot de Plutus...');
 client.login(process.env.DISCORD_TOKEN)
     .then(() => console.log('✅ ¡Login exitoso en el bot de Plutus alv!'))
     .catch(err => console.error('❌ ERROR CRÍTICO EN LOGIN ALV:', err));
+        
