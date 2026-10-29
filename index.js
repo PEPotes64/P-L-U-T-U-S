@@ -29,7 +29,6 @@ require('dotenv').config();
 const UserXP = require('./UserXP.js');
 const Background = require('./Background.js');
 
-// --- MODELOS DE MONGO (FUENTES, PACKS Y TABLAS) ---
 const fontSchema = new mongoose.Schema({
     guildId: { type: String, required: true },
     nombreId: { type: String, required: true },
@@ -461,17 +460,17 @@ async function generarTarjetaCritica({
             ctx.fill();
         }
 
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = `bold 12px ${fontMain}`;
-            ctx.fillText(`${val}%`, x - 2, graphYBase - (val > 0 ? currentBarHeight : 0) - 8);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `bold 12px ${fontMain}`;
+        ctx.fillText(`${val}%`, x - 2, graphYBase - (val > 0 ? currentBarHeight : 0) - 8);
 
-            ctx.fillStyle = '#AAAAAA';
-            ctx.font = `bold 11px ${fontMain}`;
-            ctx.fillText(item.nombre, x - 10, graphYBase + 20);
+        ctx.fillStyle = '#AAAAAA';
+        ctx.font = `bold 11px ${fontMain}`;
+        ctx.fillText(item.nombre, x - 10, graphYBase + 20);
     });
 
     return canvas.toBuffer('image/png');
-    }
+}
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
@@ -708,7 +707,7 @@ client.on('interactionCreate', async interaction => {
         const menuSelec = new StringSelectMenuBuilder()
             .setCustomId('tienda_menu')
             .setPlaceholder('Elegí un cosmético para comprar...')
-            .addOptions(opcionesMenu);
+            .addOpttions(opcionesMenu);
 
         const fila = new ActionRowBuilder().addComponents(menuSelec);
         await interaction.editReply({ embeds: [tiendaEmbed], components: [fila] });
@@ -813,23 +812,13 @@ client.on('interactionCreate', async interaction => {
     } 
 });
 
-            client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', async interaction => {
     try {
         if (interaction.isButton()) {
             const { customId } = interaction;
             const userId = interaction.user.id;
             const guildId = interaction.guild.id;
 
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
-            const xpTotalActual = obtenerXpTotal(userXpData);
-
-                    if (interaction.isButton()) {
-            const { customId } = interaction;
-            const userId = interaction.user.id;
-            const guildId = interaction.guild.id;
-
-            // 1. ¡Evitamos que se quede pensando de inmediato!
             await interaction.deferUpdate().catch(() => {});
 
             let userXpData = await UserXP.findOne({ userId, guildId });
@@ -839,7 +828,7 @@ client.on('interactionCreate', async interaction => {
             if (customId.startsWith('exec_comprar_pack_')) {
                 const packId = customId.replace('exec_comprar_pack_', '');
                 const packObj = await Pack.findOne({ guildId, nombreId: packId });
-                if (!packObj) return await interaction.followUp({ content: '❌ El pack ya no existe alv.', ephemeral: true });
+                if (!packObj) return await interaction.followUp({ content: '❌ El pack ya no existe.', ephemeral: true });
                 if (packObj.nivelMinimo && userXpData.level < packObj.nivelMinimo) return await interaction.followUp({ content: `❌ Requiere Nivel ${packObj.nivelMinimo}.`, ephemeral: true });
                 if (xpTotalActual < packObj.precio) return await interaction.followUp({ content: `❌ Necesitás ${packObj.precio} XP.`, ephemeral: true });
 
@@ -855,8 +844,6 @@ client.on('interactionCreate', async interaction => {
                 userXpData.cartelEquipado = packObj.fondoNombreId;
                 userXpData.fuenteEquipada = packObj.fuenteNombreId;
                 await userXpData.save();
-                
-                // Usamos editReply para actualizar el mensaje de la vista previa limpio
                 return await interaction.editReply({ content: `📦 ¡Compraste y equipaste el pack combo **${packId}** con éxito alv!`, embeds: [], components: [] });
             }
 
@@ -907,11 +894,14 @@ client.on('interactionCreate', async interaction => {
                 const ctx = canvas.getContext('2d');
                 
                 try {
-                    if (bgObj) {
+                    if (bgObj && (bgObj.fondoUrl || bgObj.urlImagen)) {
                         const resBg = await fetch(bgObj.fondoUrl || bgObj.urlImagen);
                         if (resBg.ok) {
                             const img = await loadImage(Buffer.from(await resBg.arrayBuffer()));
                             ctx.drawImage(img, 0, 0, 1000, 600);
+                        } else {
+                            ctx.fillStyle = '#1a1035';
+                            ctx.fillRect(0, 0, 1000, 600);
                         }
                     } else {
                         ctx.fillStyle = '#1a1035';
@@ -1023,4 +1013,4 @@ console.log('🔄 Conectando bot de Plutus a Discord...');
 client.login(process.env.DISCORD_TOKEN)
     .then(() => console.log('✅ ¡Login exitoso en el bot de Plutus!'))
     .catch(err => console.error('❌ ERROR CRÍTICO EN LOGIN ALV:', err));
-                
+                                                                            
