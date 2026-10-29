@@ -1358,12 +1358,59 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
+        // --- EQUIPAR COSMÉTICOS DESDE EL PERFIL ---
+        if (customId === 'equipar_tabla_menu') {
+            await interaction.deferReply({ ephemeral: true });
+            const tablaId = values[0].replace('equipar_tabla_', '').trim();
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            if (!userXpData) userXpData = new UserXP({ userId, guildId });
+            userXpData.tablaEquipada = tablaId;
+            await userXpData.save();
+            return await interaction.editReply({ content: `✅ ¡Te equipaste la tabla **"${tablaId}"** con éxito!` });
+        }
+
+        if (customId === 'equipar_cartel_menu') {
+            await interaction.deferReply({ ephemeral: true });
+            const cartelId = values[0].replace('equipar_cartel_', '');
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            if (!userXpData) userXpData = new UserXP({ userId, guildId });
+            userXpData.cartelEquipado = cartelId;
+            await userXpData.save();
+            return await interaction.editReply({ content: `🖼️ ¡Te equipaste el fondo **"${cartelId}"** con éxito!` });
+        }
+
+        if (customId === 'equipar_fuente_menu') {
+            await interaction.deferReply({ ephemeral: true });
+            const fuenteId = values[0].replace('equipar_fuente_', '');
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            if (!userXpData) userXpData = new UserXP({ userId, guildId });
+            userXpData.fuenteEquipada = fuenteId;
+            await userXpData.save();
+            return await interaction.editReply({ content: `🔤 ¡Te equipaste la fuente **"${fuenteId}"** con éxito!` });
+        }
+
+        if (customId === 'equipar_pack_menu') {
+            await interaction.deferReply({ ephemeral: true });
+            const packId = values[0].replace('equipar_pack_', '');
+            const packObj = await Pack.findOne({ guildId, nombreId: packId });
+            if (!packObj) return await interaction.editReply('❌ El pack ya no existe.');
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            if (!userXpData) userXpData = new UserXP({ userId, guildId });
+            userXpData.cartelEquipado = packObj.fondoNombreId;
+            userXpData.fuenteEquipada = packObj.fuenteNombreId;
+            await userXpData.save();
+            return await interaction.editReply({ content: `📦 ¡Te equipaste el pack combo **"${packId}"** con éxito!` });
+        }
+
+    } catch (err) {
+        console.error("Error en select menus de Plutus:", err);
+    }
+});
+
 // --- MANEJADOR DE BOTONES (COMPRAS Y CONFIRMACIONES) ---
 client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
     
-    console.log(`🔍 Comando ejecutado: "${interaction.commandName}" por ${interaction.user.tag}`);
-
     const { customId } = interaction;
 
     try {
@@ -1395,7 +1442,7 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply({ content: `🖼️ ¡Compra exitosa! Te compraste y equipaste el fondo **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
             }
 
-                        if (tipo === 'font') {
+            if (tipo === 'font') {
                 const fontObj = await Font.findOne({ guildId, nombreId: itemId });
                 if (!fontObj || xpTotalActual < fontObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la fuente ya no existe.', ephemeral: true });
 
@@ -1426,7 +1473,7 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply({ content: `📦 ¡Compra exitosa! Te compraste y equipaste el pack combo **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
             }
 
-                        if (tipo === 'tabla') {
+            if (tipo === 'tabla') {
                 const tablaObj = await Tabla.findOne({ guildId, nombreId: itemId });
                 if (!tablaObj || xpTotalActual < tablaObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la tabla ya no existe.', ephemeral: true });
 
@@ -1447,4 +1494,4 @@ console.log('🔌 Conectando bot de Plutus...');
 client.login(process.env.DISCORD_TOKEN)
     .then(() => console.log('✅ ¡Login exitoso en el bot de Plutus alv!'))
     .catch(err => console.error('❌ ERROR CRÍTICO EN LOGIN ALV:', err));
-        
+                
