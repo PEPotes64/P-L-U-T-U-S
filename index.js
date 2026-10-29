@@ -632,7 +632,7 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    if (commandName === 'comprar') {
+        if (commandName === 'comprar') {
         await interaction.deferReply();
 
         const fondosTienda = await Background.find({ guildId: interaction.guild.id, precio: { $ne: null } });
@@ -707,12 +707,13 @@ client.on('interactionCreate', async interaction => {
         const menuSelec = new StringSelectMenuBuilder()
             .setCustomId('tienda_menu')
             .setPlaceholder('Elegí un cosmético para comprar...')
-            .addOpttions(opcionesMenu);
+            .addOptions(opcionesMenu);
 
         const fila = new ActionRowBuilder().addComponents(menuSelec);
         await interaction.editReply({ embeds: [tiendaEmbed], components: [fila] });
         return;
-    }
+        }
+    
 
     if (commandName === 'setpack') {
         if (interaction.user.id !== PEPO_ID) return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
