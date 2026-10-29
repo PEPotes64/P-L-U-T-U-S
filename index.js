@@ -1554,9 +1554,11 @@ client.on('interactionCreate', async interaction => {
             await userXpData.save();
             return await interaction.editReply({ content: `📦 ¡Te equipaste el pack combo **"${packId}"** con éxito!` });
         }
-        } catch (err) {
-        console.error("Error en menús de selección de Plutus:", err);
-    }
+        }
+    } // <-- Esta llave es la que le falta al try de los autoroles
+} catch (err) {
+    console.error("Error en menús de selección de Plutus:", err);
+}
 });
 
 
