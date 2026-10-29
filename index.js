@@ -224,15 +224,22 @@ const dataTabla = {
 
 const dataSetAuto = {
     name: 'setauto',
-    description: 'Crea un menú de autoroles público o exclusivo (Exclusivo Pepo)',
+    description: 'Crea un menú de autoroles de hasta 10 roles (Exclusivo Pepo)',
     options: [
         { name: 'nombre', type: ApplicationCommandOptionType.String, description: 'Nombre identificador único del menú', required: true },
-        { name: 'rol1', type: ApplicationCommandOptionType.Role, description: 'Primer rol del menú', required: true },
-        { name: 'rol2', type: ApplicationCommandOptionType.Role, description: 'Segundo rol del menú', required: false },
-        { name: 'rol3', type: ApplicationCommandOptionType.Role, description: 'Tercer rol del menú', required: false },
         { name: 'precio', type: ApplicationCommandOptionType.Integer, description: 'Costo en XP para obtenerlos', required: false },
         { name: 'nivel', type: ApplicationCommandOptionType.Integer, description: 'Nivel mínimo requerido', required: false },
-        { name: 'pana', type: ApplicationCommandOptionType.User, description: 'Usuario exclusivo que puede usar este menú', required: false }
+        { name: 'pana', type: ApplicationCommandOptionType.User, description: 'Usuario exclusivo que puede usar este menú', required: false },
+        { name: 'rol1', type: ApplicationCommandOptionType.Role, description: 'Rol 1', required: true },
+        { name: 'rol2', type: ApplicationCommandOptionType.Role, description: 'Rol 2', required: false },
+        { name: 'rol3', type: ApplicationCommandOptionType.Role, description: 'Rol 3', required: false },
+        { name: 'rol4', type: ApplicationCommandOptionType.Role, description: 'Rol 4', required: false },
+        { name: 'rol5', type: ApplicationCommandOptionType.Role, description: 'Rol 5', required: false },
+        { name: 'rol6', type: ApplicationCommandOptionType.Role, description: 'Rol 6', required: false },
+        { name: 'rol7', type: ApplicationCommandOptionType.Role, description: 'Rol 7', required: false },
+        { name: 'rol8', type: ApplicationCommandOptionType.Role, description: 'Rol 8', required: false },
+        { name: 'rol9', type: ApplicationCommandOptionType.Role, description: 'Rol 9', required: false },
+        { name: 'rol10', type: ApplicationCommandOptionType.Role, description: 'Rol 10', required: false }
     ]
 };
 
@@ -960,6 +967,92 @@ client.on('interactionCreate', async interaction => {
             console.error("Error al limpiar mongo:", err);
             return await interaction.editReply('❌ Fallo la limpieza alv.');
         }
+
+            if (commandName === 'setauto') {
+        if (interaction.user.id !== PEPO_ID) {
+            return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
+        }
+        await interaction.deferReply({ ephemeral: true });
+
+        const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
+        const precio = interaction.options.getInteger('precio') || 0;
+        const nivelMinimo = interaction.options.getInteger('nivel') || 1;
+        const panaUser = interaction.options.getUser('pana');
+        const propietarioId = panaUser ? panaUser.id : null;
+
+        const rolesArray = [];
+        for (let i = 1; i <= 10; i++) {
+            const rol = interaction.options.getRole(`rol${i}`);
+            if (rol) {
+                rolesArray.push({
+                    roleId: rol.id,
+                    label: rol.name,
+                    description: `Obtener el rol ${rol.name}`
+                });
+            }
+        }
+
+        if (rolesArray.length === 0) {
+            return await interaction.editReply({ content: '❌ Debes agregar al menos un rol al menú.' });
+        }
+
+        try {
+            await AutoRoleMenu.findOneAndUpdate(
+                { guildId: interaction.guild.id, nombreId },
+                { guildId: interaction.guild.id, nombreId, roles: rolesArray, precio, nivelMinimo, propietarioId },
+                { upsert: true, new: true }
+            );
+
+            const tipoTexto = propietarioId ? `🔒 Exclusivo para <@${propietarioId}>` : `🌐 Público (Para todos)`;
+            return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
+        } catch (err) {
+            console.error("Error en /setauto:", err);
+            return await interaction.editReply(`❌ Error al guardar el menú: \`${err.message}\``);
+        }
+    }
+
+    if (commandName === 'autorol') {
+        try {
+            const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
+            const guildId = interaction.guild.id;
+            const userId = interaction.user.id;
+
+            const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
+            if (!menuData) {
+                return await interaction.reply({ content: `❌ No existe ningún menú de autorol con el nombre \`${nombreId}\` alv.`, ephemeral: true });
+            }
+
+            if (menuData.propietarioId && menuData.propietarioId !== userId) {
+                return await interaction.reply({ content: `❌ Este menú de autoroles es **exclusivo** y pertenece a otro usuario alv. No puedes desplegarlo.`, ephemeral: true });
+            }
+
+            const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`autorol_select_${nombreId}`)
+                .setPlaceholder(`📂 Selecciona un rol del menú: ${nombreId}`)
+                .addOptions(
+                    menuData.roles.map(r => ({
+                        label: r.label,
+                        value: r.roleId,
+                        description: `Reclamar rol ${r.label}`,
+                        emoji: '✨'
+                    }))
+                );
+
+            const row = new ActionRowBuilder().addComponents(selectMenu);
+
+            const embed = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle(`✨ Menú de Autoroles: ${nombreId.toUpperCase()}`)
+                .setDescription(`Usa el menú desplegable de abajo para equiparte/obtener el rol.\n\n• **Precio:** ${menuData.precio > 0 ? `${menuData.precio} XP` : 'Gratis'}\n• **Nivel Mínimo:** ${menuData.nivelMinimo}`)
+                .setFooter({ text: 'Plutus • Sistema de Autoroles', iconURL: client.user.displayAvatarURL() });
+
+            return await interaction.reply({ embeds: [embed], components: [row] });
+        } catch (err) {
+            console.error("Error en /autorol:", err);
+            if (!interaction.replied) await interaction.reply({ content: `❌ Error al desplegar el autorol: \`${err.message}\``, ephemeral: true });
+        }
+    }
+        
     } 
 });
          // --- MANEJADOR DE SELECCIONES DE LA TIENDA Y MENÚS ---
