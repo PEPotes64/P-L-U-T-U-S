@@ -1150,6 +1150,52 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isStringSelectMenu()) return;
 
     const { customId, values } = interaction;
+    const userId = interaction.user.id;
+    const guildId = interaction.guild.id;
+
+    try {
+        // --- MANEJADOR DE AUTOROLES ---
+        if (customId.startsWith('autorol_select_')) {
+            const nombreId = customId.replace('autorol_select_', '');
+            const roleIdSeleccionado = values[0];
+
+            const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
+            if (!menuData) return await interaction.reply({ content: '❌ Este menú ya no existe.', ephemeral: true });
+
+            let userXpData = await UserXP.findOne({ userId, guildId });
+            const nivelUsuario = userXpData ? userXpData.level : 1;
+            const xpUsuario = userXpData ? userXpData.xp : 0;
+
+            if (nivelUsuario < menuData.nivelMinimo) {
+                return await interaction.reply({ content: `❌ Necesitas ser **Nivel ${menuData.nivelMinimo}** para reclamar este rol (Tu nivel actual: ${nivelUsuario}).`, ephemeral: true });
+            }
+
+            if (menuData.precio > 0 && xpUsuario < menuData.precio) {
+                return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP** (Tienes: ${xpUsuario} XP).`, ephemeral: true });
+            }
+
+            const member = interaction.member;
+            const role = interaction.guild.roles.cache.get(roleIdSeleccionado);
+            if (!role) return await interaction.reply({ content: '❌ El rol seleccionado ya no existe en el servidor.', ephemeral: true });
+
+            try {
+                if (member.roles.cache.has(roleIdSeleccionado)) {
+                    await member.roles.remove(roleIdSeleccionado);
+                    return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}>.`, ephemeral: true });
+                } else {
+                    if (menuData.precio > 0) {
+                        userXpData.xp -= menuData.precio;
+                        await userXpData.save();
+                    }
+
+                    await member.roles.add(roleIdSeleccionado);
+                    return await interaction.reply({ content: `✅ ¡Te has equipado con éxito el rol <@&${roleIdSeleccionado}>! ${menuData.precio > 0 ? `(Se te descontaron ${menuData.precio} XP)` : ''}`, ephemeral: true });
+                }
+            } catch (err) {
+                console.error("Error al asignar autorol:", err);
+                return await interaction.reply({ content: `❌ Ocurrió un error al modificar el rol: \`${err.message}\``, ephemeral: true });
+            }
+        }
 
     try {
         if (customId === 'tienda_menu') {
