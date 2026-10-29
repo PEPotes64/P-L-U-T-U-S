@@ -67,7 +67,6 @@ const client = new Client({
     ]
 });
 
-// TU ID EXCLUSIVA DE PEPO
 const PEPO_ID = '1259006426978713620';
 
 mongoose.connect(process.env.MONGO_URI)
@@ -82,7 +81,6 @@ mongoose.connect(process.env.MONGO_URI)
     })
     .catch(err => console.error('❌ Error al conectar a MongoDB:', err));
 
-// --- COMANDOS SLASH DE PLUTUS ---
 const dataComprar = { name: 'comprar', description: 'Abre la tienda de cosméticos de Plutus gastando tu XP' };
 const dataPerfil = { name: 'perfil', description: 'Abre tu armario de fondos, fuentes y tablas' };
 
@@ -200,7 +198,6 @@ client.once('ready', async () => {
     }
 });
 
-// --- HELPERS DE XP ---
 const obtenerXpTotal = (data) => {
     let total = data.xp;
     for (let i = 1; i < data.level; i++) {
@@ -224,7 +221,6 @@ const recalcularProgreso = (data, nuevoXpTotal) => {
     data.xp = xpRestante;
 };
 
-// --- RENDERIZADOR CANVAS BLINDADO DE PLUTUS ---
 async function generarTarjetaCritica({ 
     dibujoUrl, 
     artistaNombre, 
@@ -465,19 +461,18 @@ async function generarTarjetaCritica({
             ctx.fill();
         }
 
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = `bold 12px ${fontMain}`;
-        ctx.fillText(`${val}%`, x - 2, graphYBase - (val > 0 ? currentBarHeight : 0) - 8);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `bold 12px ${fontMain}`;
+            ctx.fillText(`${val}%`, x - 2, graphYBase - (val > 0 ? currentBarHeight : 0) - 8);
 
-        ctx.fillStyle = '#AAAAAA';
-        ctx.font = `bold 11px ${fontMain}`;
-        ctx.fillText(item.nombre, x - 10, graphYBase + 20);
+            ctx.fillStyle = '#AAAAAA';
+            ctx.font = `bold 11px ${fontMain}`;
+            ctx.fillText(item.nombre, x - 10, graphYBase + 20);
     });
 
     return canvas.toBuffer('image/png');
-}
+    }
 
-// --- MANEJADOR DE COMANDOS SLASH ---
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
@@ -506,15 +501,17 @@ client.on('interactionCreate', async interaction => {
 
             const packsComprados = userXpData?.packsComprados || [];
             const packsGratisLvl = await Pack.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
-            const packsPredeterminados = await Pack.find({ guildId, precio: null, nivelMinimo: null });
-            const nombresPacksGratis = [...packsGratisLvl, ...packsPredeterminados].map(p => p.nombreId);
+            const packsPredeterminadas = await Pack.find({ guildId, precio: null, nivelMinimo: null });
+            const nombresPacksGratis = [...packsGratisLvl, ...packsPredeterminadas].map(p => p.nombreId);
             const todosMisPacks = [...new Set([...nombresPacksGratis, ...packsComprados])];
 
             const tablasCompradas = userXpData?.tablasCompradas || [];
             const tablasGratisLvl = await Tabla.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
             const tablasPredeterminadas = await Tabla.find({ guildId, precio: null, nivelMinimo: null });
             const nombresTablasGratis = [...tablasGratisLvl, ...tablasPredeterminadas].map(t => t.nombreId);
-                        const perfilEmbed = new EmbedBuilder()
+            const todasMisTablas = [...new Set([...nombresTablasGratis, ...tablasCompradas])];
+
+            const perfilEmbed = new EmbedBuilder()
                 .setColor('#FFD700')
                 .setTitle(`🎨 Armario de Plutus de ${interaction.user.username}`)
                 .setDescription('Elegí y equipá tus cosméticos artísticos.')
@@ -563,8 +560,9 @@ client.on('interactionCreate', async interaction => {
             console.error("Error en /perfil:", err);
             if (interaction.deferred) await interaction.editReply(`❌ Error al abrir perfil: \`${err.message}\``);
         }
-                    }
-        if (commandName === 'critica') {
+    }
+
+    if (commandName === 'critica') {
         if (interaction.user.id !== PEPO_ID) {
             return await interaction.reply({ content: '❌ Solo Pepo.', ephemeral: true });
         }
@@ -815,8 +813,7 @@ client.on('interactionCreate', async interaction => {
     } 
 });
 
-// --- MANEJADOR DE SELECCIONES Y BOTONES DE PLUTUS (TIENDA Y ARMARIO) ---
-client.on('interactionCreate', async interaction => {
+            client.on('interactionCreate', async interaction => {
     try {
         if (interaction.isButton()) {
             const { customId } = interaction;
@@ -954,29 +951,7 @@ client.on('interactionCreate', async interaction => {
                 if (!userXpData.fuentesCompradas.includes(fontId)) userXpData.fuentesCompradas.push(fontId);
                 userXpData.fuenteEquipada = fontId;
                 await userXpData.save();
-                return await interaction.editReply({ content: `🔤 ¡Compraste y equipastate la fuente **${fontId}** con éxito!' });
-            }
-
-            if (opcion.startsWith('comprar_pack_')) {
-                const packId = opcion.replace('comprar_pack_', '');
-                const packObj = await Pack.findOne({ guildId, nombreId: packId });
-                if (!packObj) return await interaction.editReply({ content: '❌ El pack ya no existe.' });
-                if (packObj.nivelMinimo && userXpData.level < packObj.nivelMinimo) return await interaction.editReply({ content: `❌ Requiere Nivel ${packObj.nivelMinimo}.` });
-                if (xpTotalActual < packObj.precio) return await interaction.editReply({ content: `❌ Necesitás ${packObj.precio} XP.` });
-
-                recalcularProgreso(userXpData, xpTotalActual - packObj.precio);
-                if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
-                if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
-                if (!userXpData.packsComprados) userXpData.packsComprados = [];
-
-                if (!userXpData.cartelesComprados.includes(packObj.fondoNombreId)) userXpData.cartelesComprados.push(packObj.fondoNombreId);
-                if (!userXpData.fuentesCompradas.includes(packObj.fuenteNombreId)) userXpData.fuentesCompradas.push(packObj.fuenteNombreId);
-                if (!userXpData.packsComprados.includes(packId)) userXpData.packsComprados.push(packId);
-
-                userXpData.cartelEquipado = packObj.fondoNombreId;
-                userXpData.fuenteEquipada = packObj.fuenteNombreId;
-                await userXpData.save();
-                return await interaction.editReply({ content: `📦 ¡Compraste y equipaste el pack combo **${packId}**!` });
+                return await interaction.editReply({ content: `🔤 ¡Compraste y equipaste la fuente **${fontId}** con éxito!` });
             }
 
             if (opcion.startsWith('comprar_tabla_')) {
@@ -1034,4 +1009,4 @@ console.log('🔄 Conectando bot de Plutus a Discord...');
 client.login(process.env.DISCORD_TOKEN)
     .then(() => console.log('✅ ¡Login exitoso en el bot de Plutus!'))
     .catch(err => console.error('❌ ERROR CRÍTICO EN LOGIN ALV:', err));
-                    
+                
