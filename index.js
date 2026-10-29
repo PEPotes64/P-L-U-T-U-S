@@ -270,7 +270,7 @@ async function generarTarjetaCritica({
         ctx.fillRect(0, 0, width, height);
     }
 
-        // Si hay tabla equipada, reemplazamos el panel oscuro por la imagen de la tabla
+            // --- ÚNICO BLOQUE OFICIAL PARA LA TABLA ---
     let tablaRenderizada = false;
     if (tablaUrl) {
         try {
@@ -281,9 +281,9 @@ async function generarTarjetaCritica({
 
                 ctx.save();
                 ctx.beginPath();
-                // Coordenadas exactas que ocupaba el cuadro oscuro (X:20, Y:20, Ancho:960, Alto:560, Radio:20)
+                // Reemplaza TODO el panel interior con las medidas exactas (X:20, Y:20, Ancho:960, Alto:560, Radio:20)
                 ctx.roundRect(20, 20, width - 40, height - 40, 20);
-                ctx.clip(); // Recorta la imagen para que respete los bordes redondeados
+                ctx.clip(); // Recorta para que encaje perfecto en los bordes redondeados
                 
                 ctx.drawImage(imgTabla, 20, 20, width - 40, height - 40);
                 ctx.restore();
@@ -294,7 +294,7 @@ async function generarTarjetaCritica({
         }
     }
 
-    // Si no hay tabla o falló, ponemos el cuadro oscuro clásico de respaldo
+    // Si el usuario no tiene tabla equipada o falló, se pinta el panel oscuro clásico de respaldo
     if (!tablaRenderizada) {
         ctx.save();
         ctx.fillStyle = 'rgba(15, 15, 20, 0.75)';
