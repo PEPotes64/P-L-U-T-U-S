@@ -978,12 +978,12 @@ client.on('interactionCreate', async interaction => {
             return await interaction.editReply('❌ Fallo la limpieza alv.');
         }
 
-                if (commandName === 'setauto') {
+                    if (commandName === 'setauto') {
         if (interaction.user.id !== PEPO_ID) {
             return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
         }
         
-        // Deferimos la respuesta al instante para que Discord no marque timeout
+        // <--- AQUÍ FALTABA CERRAR LA LLAVE DEL IF O ASEGURAR QUE SIGA DIRECTO:
         await interaction.deferReply({ ephemeral: true });
 
         const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
