@@ -1267,7 +1267,6 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply({ content: `🪞 ¡Compra exitosa! Te compraste y equipaste la tabla **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
             }
         }
-        }
             
     } catch (err) {
         console.error("Error en interacciones del bot Plutus:", err);
