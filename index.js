@@ -727,7 +727,7 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                                    if (commandName === 'comprar') {
+                        if (commandName === 'tiendatarjetas') {
                 try {
                     if (!interaction.deferred && !interaction.replied) {
                         await interaction.deferReply({ ephemeral: true });
@@ -735,17 +735,53 @@ client.on('interactionCreate', async interaction => {
 
                     const guildId = interaction.guild.id;
 
-                    const [fondos, fuentes, packs, tablas, menusAutorol] = await Promise.all([
+                    const [fondos, fuentes, packs, tablas] = await Promise.all([
                         Background.find({ guildId }),
                         Font.find({ guildId }),
                         Pack.find({ guildId }),
-                        Tabla.find({ guildId }),
-                        AutoRoleMenu.find({ guildId })
+                        Tabla.find({ guildId })
                     ]);
 
-                    // LOG DE DEBUGS PARA VER QUÉ VERGAS ENCUENTRA MONGO
-                    console.log(`🔍 [TIENDA] Bgs: ${fondos.length}, Fuentes: ${fuentes.length}, Packs: ${packs.length}, Tablas: ${tablas.length}, Autoroles: ${menusAutorol.length}`);
-                    console.log("✨ Contenido exacto de menusAutorol:", JSON.stringify(menusAutorol));
+                    const opciones = [];
+
+                    fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
+                    fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
+                    packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`.substring(0, 25), value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`.substring(0, 50), emoji: '📦' }));
+                    tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`.substring(0, 25), value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`.substring(0, 50), emoji: '🪞' }));
+
+                    if (opciones.length === 0) {
+                        return await interaction.editReply({ content: '⚠️ La tienda de tarjetas está vacía todavía alv. Sube cosméticos con `/setbg`, `/setfont`, etc.' });
+                    }
+
+                    const selectMenu = new StringSelectMenuBuilder()
+                        .setCustomId('tienda_tarjetas_menu')
+                        .setPlaceholder('🛒 Selecciona un cosmético para comprar...')
+                        .addOptions(opciones.slice(0, 25));
+
+                    const row = new ActionRowBuilder().addComponents(selectMenu);
+                    const embed = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle('🖼️ Tienda de Tarjetas y Arte de Plutus')
+                        .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs y tablas exclusivas para tu perfil.');
+
+                    return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
+
+                } catch (err) {
+                    console.error("❌ Error en /tiendatarjetas alv:", err);
+                    if (interaction.isRepliable()) {
+                        await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.' }).catch(() => {});
+                    }
+                }
+                        }
+
+                        if (commandName === 'tiendaperfil') {
+                try {
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.deferReply({ ephemeral: true });
+                    }
+
+                    const guildId = interaction.guild.id;
+                    const menusAutorol = await AutoRoleMenu.find({ guildId });
 
                     const opciones = [];
 
@@ -756,7 +792,7 @@ client.on('interactionCreate', async interaction => {
                             const totalRoles = m.roles ? m.roles.length : 0;
 
                             opciones.push({ 
-                                label: `Menú: ${nombreLimpio.toUpperCase()}`.substring(0, 25), 
+                                label: `Menú Rol: ${nombreLimpio.toUpperCase()}`.substring(0, 25), 
                                 value: `comprar_autorol_${nombreLimpio}`, 
                                 description: `Precio: ${precioMenu} XP | Roles: ${totalRoles}`.substring(0, 50), 
                                 emoji: '✨' 
@@ -764,39 +800,30 @@ client.on('interactionCreate', async interaction => {
                         });
                     }
 
-                    fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
-                    fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
-                    packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`.substring(0, 25), value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`.substring(0, 50), emoji: '📦' }));
-                    tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`.substring(0, 25), value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`.substring(0, 50), emoji: '🪞' })); // Corregido t.precio
-
                     if (opciones.length === 0) {
-                        return await interaction.editReply({ content: '⚠️ La tienda está vacía todavía alv. Sube cosméticos o menús con precio.' });
+                        return await interaction.editReply({ content: '⚠️ No hay menús de autoroles creados todavía alv. Usa `/setauto` primero.' });
                     }
 
                     const selectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('tienda_menu')
-                        .setPlaceholder('🛒 Selecciona un artículo para comprar...')
+                        .setCustomId('tienda_perfil_menu')
+                        .setPlaceholder('✨ Selecciona un menú de autorol para desbloquear...')
                         .addOptions(opciones.slice(0, 25));
 
                     const row = new ActionRowBuilder().addComponents(selectMenu);
                     const embed = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
-                        .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs, tablas y menús de autoroles exclusivos.');
+                        .setColor('#00E676')
+                        .setTitle('✨ Tienda de Perfil y Autoroles de Plutus')
+                        .setDescription('Compra aquí los paquetes de autoroles exclusivos para reclamar tus roles en `/autorol`.');
 
                     return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
 
                 } catch (err) {
-                    console.error("❌ Error interno en /comprar alv:", err);
+                    console.error("❌ Error en /tiendaperfil alv:", err);
                     if (interaction.isRepliable()) {
-                        if (interaction.deferred || interaction.replied) {
-                            await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda alv.' }).catch(() => {});
-                        } else {
-                            await interaction.reply({ content: '❌ Hubo un error al abrir la tienda alv.', ephemeral: true }).catch(() => {});
-                        }
+                        await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de perfil alv.' }).catch(() => {});
                     }
                 }
-                                    }
+                        }
             
             if (commandName === 'autorol') {
     const guildId = interaction.guild.id;
@@ -971,6 +998,41 @@ client.on('interactionCreate', async interaction => {
                 await userProfile.save();
 
                 return await interaction.reply({ content: `✅ ¡Compra exitosa alv! Has desbloqueado el menú de autorol **${nombreIdMenu.toUpperCase()}**. Ve a \`/autorol\` para usarlo.`, ephemeral: true });
+            }
+                    }
+
+                    if (interaction.customId === 'tienda_perfil_menu') {
+            const seleccion = interaction.values[0];
+
+            if (seleccion.startsWith('comprar_autorol_')) {
+                const nombreIdMenu = seleccion.replace('comprar_autorol_', '');
+                const menuTarget = await AutoRoleMenu.findOne({ guildId: interaction.guild.id, nombreId: nombreIdMenu });
+
+                if (!menuTarget) {
+                    return await interaction.reply({ content: '❌ Ese menú de autorol ya no existe alv.', ephemeral: true });
+                }
+
+                let userProfile = await UserXP.findOne({ userId: interaction.user.id, guildId: interaction.guild.id });
+                if (!userProfile) {
+                    userProfile = new UserXP({ userId: interaction.user.id, guildId: interaction.guild.id, xp: 0, level: 1, autorolesComprados: [] });
+                }
+
+                if (userProfile.autorolesComprados && userProfile.autorolesComprados.includes(nombreIdMenu)) {
+                    return await interaction.reply({ content: '⚠️ Ya tienes desbloqueado este menú de autorol en tu perfil alv. Búscalo en `/autorol`.', ephemeral: true });
+                }
+
+                const costo = menuTarget.precio ?? 0;
+                if (userProfile.xp < costo) {
+                    return await interaction.reply({ content: `❌ No tienes suficiente XP alv. Te faltan ${costo - userProfile.xp} XP.`, ephemeral: true });
+                }
+
+                userProfile.xp -= costo;
+                if (!userProfile.autorolesComprados) userProfile.autorolesComprados = [];
+                userProfile.autorolesComprados.push(nombreIdMenu);
+
+                await userProfile.save();
+
+                return await interaction.reply({ content: `✅ ¡Compra de perfil exitosa alv! Has desbloqueado el menú **${nombreIdMenu.toUpperCase()}**. Ya puedes usarlo en \`/autorol\`.`, ephemeral: true });
             }
                     }
         }
