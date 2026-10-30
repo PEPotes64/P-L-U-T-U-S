@@ -795,31 +795,42 @@ client.on('interactionCreate', async interaction => {
             
             
             if (commandName === 'autorol') {
-                const menusDisponibles = await AutoRoleMenu.find({ guildId });
+    const guildId = interaction.guild.id;
+    const userId = interaction.user.id;
 
-                if (!menusDisponibles || menusDisponibles.length === 0) {
-                    return await interaction.reply({ content: '❌ Todavía no hay ningún menú de autoroles creado en este servidor alv.', ephemeral: true });
-                }
+    // Buscar perfil del usuario para ver qué ha comprado
+    const userProfile = await User.findOne({ userId, guildId });
+    const comprados = userProfile ? userProfile.autorolesComprados || [] : [];
 
-                const selectMenu = new StringSelectMenuBuilder()
-                    .setCustomId('seleccionar_menu_autorol')
-                    .setPlaceholder('✅ Elige un menú de autoroles...')
-                    .addOptions(
-                        menusDisponibles.map(m => ({
-                            label: `Menú: ${m.nombreId.toUpperCase()}`,
-                            description: `Roles disponibles: ${m.roles.length} | Creador/Dueño: ${m.propietarioId ? 'Exclusivo 🔒' : 'Público 🌐'}`,
-                            value: `ver_menu_${m.nombreId}`,
-                            emoji: '✅'
-                        }))
-                    );
+    // Buscar todos los menús del servidor
+    const todosLosMenus = await AutoRoleMenu.find({ guildId });
 
-                const row = new ActionRowBuilder().addComponents(selectMenu);
-                const embed = new EmbedBuilder()
-                    .setColor('#FFD700')
-                    .setTitle('📜 Directorio de Autoroles')
-                    .setDescription('Selecciona abajo el menú de autoroles que quieres abrir para equiparte tus roles alv.');
+    // Filtrar: solo mostrar los que son gratis (precio 0 o públicos) O los que el usuario ya compró
+    const menusDisponibles = todosLosMenus.filter(m => (m.precio ?? 0) === 0 || comprados.includes(m.nombreId) || interaction.user.id === PIPO_ID);
 
-                return await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    if (menusDisponibles.length === 0) {
+        return await interaction.reply({ content: '❌ Todavía no tienes ningún menú de autoroles desbloqueado. ¡Pásate por `/comprar` para adquirirlos alv!', ephemeral: true });
+    }
+
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('seleccionar_menu_autorol')
+        .setPlaceholder('🛒 Elige un menú de autoroles tuyo...')
+        .addOptions(
+            menusDisponibles.map(m => ({
+                label: `Menú: ${m.nombreId.toUpperCase()}`.substring(0, 25),
+                value: `sr_menu_${m.nombreId}`,
+                description: `Roles: ${m.roles.length} | Desbloqueado alv`.substring(0, 50),
+                emoji: '✨'
+            })).slice(0, 25)
+        );
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
+    const embed = new EmbedBuilder()
+        .setColor('#FFD700')
+        .setTitle('✨ Tus Menús de Autoroles')
+        .setDescription('Selecciona abajo el menú de autoroles que compraste para equiparte tus roles alv.');
+
+    return await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
             }
 
             if (commandName === 'delauto') {
@@ -923,41 +934,44 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.reply({ content: `✅ ¡Te has equipado el nuevo rol <@&${roleIdSeleccionado}> y se te reemplazó el color anterior alv!`, ephemeral: true });
             }
 
-            if (customId === 'tienda_menu') {
-                await interaction.deferReply({ ephemeral: true });
-                const opcion = values[0];
+            // Dentro del interactionCreate para los select menus (cuando el customId es 'tienda_menu')
+if (interaction.customId === 'tienda_menu') {
+    const seleccion = interaction.values[0]; // Ej: comprar_autorol_colores
 
-                let userXpData = await UserXP.findOne({ userId, guildId });
-                if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
+    if (seleccion.startsWith('comprar_autorol_')) {
+        const nombreIdMenu = seleccion.replace('comprar_autorol_', '');
+        const menuTarget = await AutoRoleMenu.findOne({ guildId: interaction.guild.id, nombreId: nombreIdMenu });
 
-                const xpTotalActual = obtenerXpTotal(userXpData);
+        if (!menuTarget) {
+            return await interaction.reply({ content: '❌ Ese menú de autorol ya no existe alv.', ephemeral: true });
+        }
 
-                if (opcion.startsWith('comprar_autorol_')) {
-                    const menuId = opcion.replace('comprar_autorol_', '');
-                    const menuObj = await AutoRoleMenu.findOne({ guildId, nombreId: menuId });
-                    if (!menuObj) return await interaction.editReply({ content: '❌ El menú de autorroles ya no existe alv.' });
+        // Aquí buscas el perfil de usuario (ejemplo con tu modelo User o Profile)
+        let userProfile = await User.findOne({ userId: interaction.user.id, guildId: interaction.guild.id });
+        if (!userProfile) {
+            userProfile = new User({ userId: interaction.user.id, guildId: interaction.guild.id, xp: 0, autorolesComprados: [] });
+        }
 
-                    if (userXpData.autorolesComprados && userXpData.autorolesComprados.includes(menuId)) {
-                        return await interaction.editReply({ content: '❌ Ya compraste este menú de autorroles anteriormente alv.' });
-                    }
+        // Validar si ya lo tiene comprado
+        if (userProfile.autorolesComprados && userProfile.autorolesComprados.includes(nombreIdMenu)) {
+            return await interaction.reply({ content: '⚠️ Ya tienes desbloqueado este menú de autorol alv. Búscalo en `/autorol`.', ephemeral: true });
+        }
 
-                                        if (xpTotalActual < menuObj.precio) {
-                        return await interaction.editReply({ content: `❌ No tienes suficiente XP. Necesitas **${menuObj.precio} XP** (Tienes: ${xpTotalActual} XP).` });
-                    }
+        const costo = menuTarget.precio ?? 0;
+        if (userProfile.xp < costo) {
+            return await interaction.reply({ content: `❌ No tienes suficiente XP alv. Te faltan ${costo - userProfile.xp} XP.`, ephemeral: true });
+        }
 
-                    const botones = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`exec_comprar_autorol_${menuId}`).setLabel('🛒 Confirmar Compra de Menú').setStyle(ButtonStyle.Success),
-                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
-                    );
+        // Cobrar XP y registrar la compra
+        userProfile.xp -= costo;
+        if (!userProfile.autorolesComprados) userProfile.autorolesComprados = [];
+        userProfile.autorolesComprados.push(nombreIdMenu);
 
-                    const embedPreview = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle(`✨ Comprar Menú de Autoroles: ${menuId.toUpperCase()}`)
-                        .setDescription(`Desbloquea acceso completo a este menú de roles.\nPrecio: **${menuObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
+        await userProfile.save();
 
-                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
-                }
-            }
+        return await interaction.reply({ content: `✅ ¡Compra exitosa alv! Has desbloqueado el menú de autorol **${nombreIdMenu.toUpperCase()}**. Ve a `/autorol` para usarlo.`, ephemeral: true });
+    }
+}
         }
     } catch (err) {
         console.error("Error crítico en interactionCreate alv:", err);
