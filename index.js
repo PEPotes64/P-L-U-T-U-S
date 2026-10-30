@@ -582,17 +582,16 @@ async function generarTarjetaCritica({
 
 // --- MANEJADOR UNIFICADO DE INTERACCIONES SLASH Y MENÚS ---
 client.on('interactionCreate', async interaction => {
-    if (interaction.isChatInputCommand()) {
-        console.log(`🚨 COMANDO EJECUTADO: /${interaction.commandName} por ${interaction.user.tag}`);
-    }
     try {
-        // El resto de tu código...
+        // 1. COMANDOS SLASH (/)
+        if (interaction.isChatInputCommand()) {
+            console.log(`🚨 COMANDO EJECUTADO: /${interaction.commandName} por ${interaction.user.tag}`);
             const { commandName } = interaction;
+            const guildId = interaction.guild.id;
+            const userId = interaction.user.id;
 
             if (commandName === 'perfil') {
                 await interaction.deferReply({ ephemeral: true });
-                const userId = interaction.user.id;
-                const guildId = interaction.guild.id;
 
                 let userXpData = await UserXP.findOne({ userId, guildId });
                 const nivelUsuario = userXpData ? userXpData.level : 1;
@@ -680,7 +679,7 @@ client.on('interactionCreate', async interaction => {
                         new StringSelectMenuBuilder().setCustomId('equipar_pack_menu').setPlaceholder('📦 Elegí un Pack Combo...').addOptions(todosMisPacks.map(p => ({ label: `Pack: ${p}`, value: `equipar_pack_${p}`, emoji: '📦' })))
                     ));
                 }
-                if (todasMisTablas.length > 0) {
+                if (todosMisTablas.length > 0) {
                     componentes.push(new ActionRowBuilder().addComponents(
                         new StringSelectMenuBuilder().setCustomId('equipar_tabla_menu').setPlaceholder('🪞 Elegí una Tabla...').addOptions(todasMisTablas.map(t => ({ label: `Tabla: ${t}`, value: `equipar_tabla_${t}`, emoji: '🪞' })))
                     ));
@@ -728,60 +727,48 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                            if (commandName === 'comprar') {
-                try {
-                    await interaction.deferReply({ ephemeral: true });
+            if (commandName === 'comprar') {
+                await interaction.deferReply({ ephemeral: true });
 
-                    const guildId = interaction.guild.id;
+                const fondos = await Background.find({ guildId });
+                const fuentes = await Font.find({ guildId });
+                const packs = await Pack.find({ guildId });
+                const tablas = await Tabla.find({ guildId });
+                const menusAutorol = await AutoRoleMenu.find({ guildId });
 
-                    const fondos = await Background.find({ guildId });
-                    const fuentes = await Font.find({ guildId });
-                    const packs = await Pack.find({ guildId });
-                    const tablas = await Tabla.find({ guildId });
-                    const menusAutorol = await AutoRoleMenu.find({ guildId });
+                console.log("🔍 Menús de autorol encontrados en Mongo:", menusAutorol);
 
-                    console.log("🔍 Menús de autorol encontrados en Mongo:", menusAutorol);
+                const opciones = [];
+                fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`, value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`, emoji: '🖼️' }));
+                fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`, value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`, emoji: '🔤' }));
+                packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`, value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`, emoji: '📦' }));
+                tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`, value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`, emoji: '🪞' }));
+                menusAutorol.forEach(m => opciones.push({ 
+                    label: `Menú Autorol: ${m.nombreId.toUpperCase()}`, 
+                    value: `comprar_autorol_${m.nombreId}`, 
+                    description: `Precio: ${m.precio ?? 0} XP | Roles: ${m.roles.length}`, 
+                    emoji: '✨' 
+                }));
 
-                    const opciones = [];
-                    fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`, value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`, emoji: '🖼️' }));
-                    fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`, value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`, emoji: '🔤' }));
-                    packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`, value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`, emoji: '📦' }));
-                    tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`, value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`, emoji: '🪞' }));
-                    menusAutorol.forEach(m => opciones.push({ 
-                        label: `Menú Autorol: ${m.nombreId.toUpperCase()}`, 
-                        value: `comprar_autorol_${m.nombreId}`, 
-                        description: `Precio: ${m.precio ?? 0} XP | Roles: ${m.roles.length}`, 
-                        emoji: '✨' 
-                    }));
-
-                    if (opciones.length === 0) {
-                        return await interaction.editReply({ content: '⚠️ La tienda está vacía todavía alv.' });
-                    }
-
-                    const selectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('tienda_menu')
-                        .setPlaceholder('🛒 Selecciona un artículo para comprar...')
-                        .addOptions(opciones.slice(0, 25));
-
-                    const row = new ActionRowBuilder().addComponents(selectMenu);
-                    const embed = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
-                        .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs, tablas y menús de autoroles exclusivos.');
-
-                    return await interaction.editReply({ embeds: [embed], components: [row] });
-
-                } catch (err) {
-                    console.error("❌ Error en el comando /comprar alv:", err);
-                    if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: '❌ Hubo un error al abrir la tienda alv.', ephemeral: true }).catch(() => {});
-                    }
+                if (opciones.length === 0) {
+                    return await interaction.editReply({ content: '⚠️ La tienda está vacía todavía alv.' });
                 }
-                            }
-            
-    
+
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId('tienda_menu')
+                    .setPlaceholder('🛒 Selecciona un artículo para comprar...')
+                    .addOptions(opciones.slice(0, 25));
+
+                const row = new ActionRowBuilder().addComponents(selectMenu);
+                const embed = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
+                    .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs, tablas y menús de autoroles exclusivos.');
+
+                return await interaction.editReply({ embeds: [embed], components: [row] });
+            }
+
             if (commandName === 'autorol') {
-                const guildId = interaction.guild.id;
                 const menusDisponibles = await AutoRoleMenu.find({ guildId });
 
                 if (!menusDisponibles || menusDisponibles.length === 0) {
@@ -809,14 +796,13 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
             }
 
-                        if (commandName === 'delauto') {
+            if (commandName === 'delauto') {
                 if (interaction.user.id !== PEPO_ID) {
                     return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
                 }
 
                 await interaction.deferReply({ ephemeral: true });
                 const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
-                const guildId = interaction.guild.id;
 
                 const resultado = await AutoRoleMenu.findOneAndDelete({ guildId, nombreId });
 
@@ -825,7 +811,7 @@ client.on('interactionCreate', async interaction => {
                 }
 
                 return await interaction.editReply({ content: `🗑️ ¡Menú de autorroles \`${nombreId}\` borrado con éxito de la base de datos alv Bv :v!` });
-                        }
+            }
         }
 
         // 2. MENÚS DESPLEGABLES (SELECT MENUS)
@@ -882,7 +868,6 @@ client.on('interactionCreate', async interaction => {
 
                 let userXpData = await UserXP.findOne({ userId, guildId });
                 const nivelUsuario = userXpData ? userXpData.level : 1;
-                const xpUsuario = userXpData ? userXpData.xp : 0;
 
                 if (nivelUsuario < menuData.nivelMinimo) {
                     return await interaction.reply({ content: `❌ Necesitas ser **Nivel ${menuData.nivelMinimo}** para reclamar este rol.`, ephemeral: true });
@@ -930,7 +915,7 @@ client.on('interactionCreate', async interaction => {
                         return await interaction.editReply({ content: '❌ Ya compraste este menú de autorroles anteriormente alv.' });
                     }
 
-                    if (xpTotalActual < menuObj.precio) {
+                                        if (xpTotalActual < menuObj.precio) {
                         return await interaction.editReply({ content: `❌ No tienes suficiente XP. Necesitas **${menuObj.precio} XP** (Tienes: ${xpTotalActual} XP).` });
                     }
 
@@ -946,191 +931,8 @@ client.on('interactionCreate', async interaction => {
 
                     return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
                 }
-
-                if (opcion.startsWith('comprar_bg_')) {
-                    const bgId = opcion.replace('comprar_bg_', '');
-                    const bgObj = await Background.findOne({ guildId, nombreId: bgId });
-                    if (!bgObj) return await interaction.editReply({ content: '❌ El fondo ya no existe alv.' });
-
-                    const botones = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`exec_comprar_bg_${bgId}`).setLabel('🛒 Confirmar Compra').setStyle(ButtonStyle.Success),
-                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
-                    );
-
-                    const embedPreview = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle(`🖼️ Previsualización de Fondo: ${bgId}`)
-                        .setDescription(`Precio: **${bgObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
-
-                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
-                }
-
-                if (opcion.startsWith('comprar_font_')) {
-                    const fontId = opcion.replace('comprar_font_', '');
-                    const fontObj = await Font.findOne({ guildId, nombreId: fontId });
-                    if (!fontObj) return await interaction.editReply({ content: '❌ La fuente ya no existe alv.' });
-
-                    const botones = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`exec_comprar_font_${fontId}`).setLabel('🛒 Confirmar Compra').setStyle(ButtonStyle.Success),
-                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
-                    );
-
-                    const embedPreview = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle(`🔤 Previsualización de Fuente: ${fontId}`)
-                        .setDescription(`Precio: **${fontObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
-
-                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
-                }
-
-                if (opcion.startsWith('comprar_pack_')) {
-                    const packId = opcion.replace('comprar_pack_', '');
-                    const packObj = await Pack.findOne({ guildId, nombreId: packId });
-                    if (!packObj) return await interaction.editReply({ content: '❌ El pack ya no existe alv.' });
-
-                    const botones = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`exec_comprar_pack_${packId}`).setLabel('🛒 Confirmar Compra').setStyle(ButtonStyle.Success),
-                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
-                    );
-
-                    const embedPreview = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle(`📦 Previsualización de Pack: ${packId}`)
-                        .setDescription(`Precio: **${packObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
-
-                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
-                }
-
-                if (opcion.startsWith('comprar_tabla_')) {
-                    const tablaId = opcion.replace('comprar_tabla_', '');
-                    const tablaObj = await Tabla.findOne({ guildId, nombreId: tablaId });
-                    if (!tablaObj) return await interaction.editReply({ content: '❌ La tabla ya no existe alv.' });
-
-                    const botones = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`exec_comprar_tabla_${tablaId}`).setLabel('🛒 Confirmar Compra').setStyle(ButtonStyle.Success),
-                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
-                    );
-
-                    const embedPreview = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle(`🪞 Previsualización de Tabla: ${tablaId}`)
-                        .setDescription(`Precio: **${tablaObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
-
-                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
-                }
-            }
-
-            if (customId.startsWith('equipar_')) {
-                await interaction.deferReply({ ephemeral: true });
-                let userXpData = await UserXP.findOne({ userId, guildId });
-                if (!userXpData) userXpData = new UserXP({ userId, guildId });
-
-                if (customId === 'equipar_tabla_menu') {
-                    userXpData.tablaEquipada = values[0].replace('equipar_tabla_', '').trim();
-                } else if (customId === 'equipar_cartel_menu') {
-                    userXpData.cartelEquipado = values[0].replace('equipar_cartel_', '');
-                } else if (customId === 'equipar_fuente_menu') {
-                    userXpData.fuenteEquipada = values[0].replace('equipar_fuente_', '');
-                } else if (customId === 'equipar_pack_menu') {
-                    const packObj = await Pack.findOne({ guildId, nombreId: values[0].replace('equipar_pack_', '') });
-                    if (packObj) {
-                        userXpData.cartelEquipado = packObj.fondoNombreId;
-                        userXpData.fuenteEquipada = packObj.fuenteNombreId;
-                    }
-                }
-                await userXpData.save();
-                return await interaction.editReply({ content: `✅ ¡Cosmético equipado con éxito alv!` });
             }
         }
-
-        // 3. BOTONES
-        if (interaction.isButton()) {
-            const { customId } = interaction;
-            if (customId === 'cancelar_compra') {
-                return await interaction.update({ content: '❌ Compra cancelada alv.', embeds: [], files: [], components: [] });
-            }
-
-            if (customId.startsWith('exec_comprar_')) {
-                await interaction.deferUpdate();
-                const partes = customId.replace('exec_comprar_', '').split('_');
-                const tipo = partes[0];
-                const itemId = partes.slice(1).join('_');
-                const userId = interaction.user.id;
-                const guildId = interaction.guild.id;
-
-                let userXpData = await UserXP.findOne({ userId, guildId });
-                if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
-                const xpTotalActual = obtenerXpTotal(userXpData);
-
-                if (tipo === 'autorol') {
-                    const menuObj = await AutoRoleMenu.findOne({ guildId, nombreId: itemId });
-                    if (!menuObj || xpTotalActual < menuObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el menú ya no existe.', ephemeral: true });
-
-                    recalcularProgreso(userXpData, xpTotalActual - menuObj.precio);
-                    if (!userXpData.autorolesComprados) userXpData.autorolesComprados = [];
-                    if (!userXpData.autorolesComprados.includes(itemId)) userXpData.autorolesComprados.push(itemId);
-                    await userXpData.save();
-
-                    return await interaction.editReply({ content: `✨ ¡Compra exitosa! Compraste el menú de autorroles **${itemId}** alv Bv :v. Ya puedes usarlo en \`/autorol\`.`, embeds: [], files: [], components: [] });
-                }
-
-                if (tipo === 'bg') {
-                    const bgObj = await Background.findOne({ guildId, nombreId: itemId });
-                    if (!bgObj || xpTotalActual < bgObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el fondo ya no existe.', ephemeral: true });
-
-                    recalcularProgreso(userXpData, xpTotalActual - bgObj.precio);
-                    if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
-                    if (!userXpData.cartelesComprados.includes(itemId)) userXpData.cartelesComprados.push(itemId);
-                    userXpData.cartelEquipado = itemId;
-                    await userXpData.save();
-                    return await interaction.editReply({ content: `🖼️ ¡Compra exitosa! Te compraste y equipaste el fondo **${itemId}** alv Bv :v.` });
-                }
-
-                if (tipo === 'font') {
-                    const fontObj = await Font.findOne({ guildId, nombreId: itemId });
-                    if (!fontObj || xpTotalActual < fontObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la fuente ya no existe.', ephemeral: true });
-
-                    recalcularProgreso(userXpData, xpTotalActual - fontObj.precio);
-                    if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
-                    if (!userXpData.fuentesCompradas.includes(itemId)) userXpData.fuentesCompradas.push(itemId);
-                    userXpData.fuenteEquipada = itemId;
-                    await userXpData.save();
-                    return await interaction.editReply({ content: `🔤 ¡Compra exitosa! Te compraste y equipaste la fuente **${itemId}** alv Bv :v.` });
-                }
-
-                if (tipo === 'pack') {
-                    const packObj = await Pack.findOne({ guildId, nombreId: itemId });
-                    if (!packObj || xpTotalActual < packObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el pack ya no existe.', ephemeral: true });
-
-                    recalcularProgreso(userXpData, xpTotalActual - packObj.precio);
-                    if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
-                    if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
-                    if (!userXpData.packsComprados) userXpData.packsComprados = [];
-
-                    if (!userXpData.cartelesComprados.includes(packObj.fondoNombreId)) userXpData.cartelesComprados.push(packObj.fondoNombreId);
-                    if (!userXpData.fuentesCompradas.includes(packObj.fuenteNombreId)) userXpData.fuentesCompradas.push(packObj.fuenteNombreId);
-                    if (!userXpData.packsComprados.includes(itemId)) userXpData.packsComprados.push(itemId);
-
-                    userXpData.cartelEquipado = packObj.fondoNombreId;
-                    userXpData.fuenteEquipada = packObj.fuenteNombreId;
-                    await userXpData.save();
-                    return await interaction.editReply({ content: `📦 ¡Compra exitosa! Te compraste y equipaste el pack combo **${itemId}** alv Bv :v.` });
-                }
-
-                if (tipo === 'tabla') {
-                    const tablaObj = await Tabla.findOne({ guildId, nombreId: itemId });
-                    if (!tablaObj || xpTotalActual < tablaObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la tabla ya no existe.', ephemeral: true });
-
-                    recalcularProgreso(userXpData, xpTotalActual - tablaObj.precio);
-                    if (!userXpData.tablasCompradas) userXpData.tablasCompradas = [];
-                    if (!userXpData.tablasCompradas.includes(itemId)) userXpData.tablasCompradas.push(itemId);
-                    userXpData.tablaEquipada = itemId;
-                    await userXpData.save();
-                    return await interaction.editReply({ content: `🪞 ¡Compra exitosa! Te compraste y equipaste la tabla **${itemId}** alv Bv :v.` });
-                }
-            }
-        }
-
     } catch (err) {
         console.error("Error crítico en interactionCreate alv:", err);
         if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
