@@ -13,7 +13,8 @@ const userXpSchema = new mongoose.Schema({
     cartelesComprados: { type: [String], default: [] },
     fuentesCompradas: { type: [String], default: [] },
     packsComprados: { type: [String], default: [] },
-    tablasCompradas: { type: [String], default: [] }
+    tablasCompradas: { type: [String], default: [] }.
+    autorolesComprados: { type: [String], default: [] }
 });
 
 module.exports = mongoose.models.UserXP || mongoose.model('UserXP', userXpSchema);
