@@ -967,31 +967,51 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-const { crearTarjetaBienvenida } = require('./utils/welcomeCanvas');
+const { crearTarjeta } = require('./utils/cardCanvas'); // O como le hayas nombrado a tu archivo
 
-// Cuando el bot enciende
-client.on('ready', () => {
-    console.log(`¡Bot conectado como ${client.user.tag} alv! Bv`);
-});
-
-// --- AQUÍ MERITO PEGÁS EL EVENTO DE BIENVENIDA ---
+// 1. BIENVENIDA
 client.on('guildMemberAdd', async (member) => {
     const canalId = '1386439506072174652';
-    const canalBienvenida = member.guild.channels.cache.get(canalId);
-    
-    if (!canalBienvenida) return;
+    const canal = member.guild.channels.cache.get(canalId);
+    if (!canal) return;
 
     try {
-        const tarjeta = await crearTarjetaBienvenida(member);
-        
-        await canalBienvenida.send({
-            content: `¡Qué onda ${member}! Pásatela chido y a darle alv Bv :v`,
-            files: [tarjeta]
-        });
+        const tarjeta = await crearTarjeta(member, 'welcome');
+        await canal.send({ content: `¡🔥Qué pedo ${member}! Pasa por el armario y elige un rol🔥`, files: [tarjeta] });
     } catch (error) {
-        console.error('Se cago la generación del banner de bienvenida:', error);
+        console.error('Error en bienvenida:', error);
     }
 });
+
+// 2. SALIDA (Despedida)
+client.on('guildMemberRemove', async (member) => {
+    const canalId = '1386439506072174652'; // Puede ser el mismo o uno distinto
+    const canal = member.guild.channels.cache.get(canalId);
+    if (!canal) return;
+
+    try {
+        const tarjeta = await crearTarjeta(member, 'goodbye');
+        await canal.send({ content: `El wey de ${member.user.tag} se largó del servidor por que se dio cuenta de lo mrd que era`, files: [tarjeta] });
+    } catch (error) {
+        console.error('Error en salida:', error);
+    }
+});
+
+// 3. BANEO
+client.on('guildBanAdd', async (ban) => {
+    const canalId = '1386439506072174652'; // Canal de moderación o registros
+    const canal = ban.guild.channels.cache.get(canalId);
+    if (!canal) return;
+
+    try {
+        // En guildBanAdd el objeto es un ban, sacamos el user de ahí
+        const tarjeta = await crearTarjeta({ user: ban.user, guild: ban.guild }, 'ban');
+        await canal.send({ content: `A ${ban.user.tag} le aplicaron la de gipmao por idiota xdd`, files: [tarjeta] });
+    } catch (error) {
+        console.error('Error en baneo:', error);
+    }
+});
+
 
 console.log('🔌 Conectando bot de Plutus...');
 client.login(process.env.DISCORD_TOKEN)
