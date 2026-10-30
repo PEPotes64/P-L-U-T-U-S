@@ -728,18 +728,14 @@ client.on('interactionCreate', async interaction => {
             }
 
                         if (commandName === 'comprar') {
-    await interaction.reply({ content: 'Abriendo tienda alv...', ephemeral: true });
-    // y luego cargas las opciones y haces un editReply
-                        }
-
-                const guildId = interaction.guild.id;
+                await interaction.reply({ content: '🛒 Abriendo la tienda alv...', ephemeral: true });
 
                 const [fondos, fuentes, packs, tablas, menusAutorol] = await Promise.all([
-                    Background.find({ guildId }),
-                    Font.find({ guildId }),
-                    Pack.find({ guildId }),
-                    Tabla.find({ guildId }),
-                    AutoRoleMenu.find({ guildId })
+                    Background.find({ guildId: interaction.guild.id }),
+                    Font.find({ guildId: interaction.guild.id }),
+                    Pack.find({ guildId: interaction.guild.id }),
+                    Tabla.find({ guildId: interaction.guild.id }),
+                    AutoRoleMenu.find({ guildId: interaction.guild.id })
                 ]);
 
                 console.log(`🔍 [TIENDA] Bgs: ${fondos.length}, Fuentes: ${fuentes.length}, Packs: ${packs.length}, Tablas: ${tablas.length}, Menús Autorol: ${menusAutorol.length}`);
@@ -776,10 +772,10 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
                     .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs, tablas y menús de autoroles exclusivos.');
 
-                return await interaction.editReply({ embeds: [embed], components: [row] });
-                                                   }
+                return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
+                        }
             
-
+            
             if (commandName === 'autorol') {
                 const menusDisponibles = await AutoRoleMenu.find({ guildId });
 
