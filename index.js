@@ -736,20 +736,22 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                                    if (commandName === 'tiendatarjetas') {
+                        if (commandName === 'tiendatarjetas') {
                 try {
+                    // 1. LO PRIMERO ES DEFERIR LA RESPUESTA PARA QUE DISCORD NO MARQUE TIMEOUT
                     if (!interaction.deferred && !interaction.replied) {
                         await interaction.deferReply({ ephemeral: true });
                     }
 
                     const guildId = interaction.guild.id;
 
-                    // Consultas separadas y protegidas para evitar bloqueos en cascada
-                    let fondos = [], fuentes = [], packs = [], tablas = [];
-                    try { fondos = await Background.find({ guildId }).lean(); } catch (e) { console.error("Error fondos:", e); }
-                    try { fuentes = await Font.find({ guildId }).lean(); } catch (e) { console.error("Error fuentes:", e); }
-                    try { packs = await Pack.find({ guildId }).lean(); } catch (e) { console.error("Error packs:", e); }
-                    try { tablas = await Tabla.find({ guildId }).lean(); } catch (e) { console.error("Error tablas:", e); }
+                    // 2. CONSULTAS RÁPIDAS
+                    const [fondos, fuentes, packs, tablas] = await Promise.all([
+                        Background.find({ guildId }).lean().catch(() => []),
+                        Font.find({ guildId }).lean().catch(() => []),
+                        Pack.find({ guildId }).lean().catch(() => []),
+                        Tabla.find({ guildId }).lean().catch(() => [])
+                    ]);
 
                     const opciones = [];
 
@@ -778,11 +780,14 @@ client.on('interactionCreate', async interaction => {
                 } catch (err) {
                     console.error("❌ Error crítico en /tiendatarjetas alv:", err);
                     if (interaction.isRepliable()) {
-                        await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.' }).catch(() => {});
+                        if (interaction.deferred || interaction.replied) {
+                            await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.' }).catch(() => {});
+                        } else {
+                            await interaction.reply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.', ephemeral: true }).catch(() => {});
+                        }
                     }
                 }
-                                    }
-            
+                        }
 
                                     if (commandName === 'tiendaperfil') {
                 try {
