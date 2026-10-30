@@ -18,9 +18,7 @@ const {
     ApplicationCommandOptionType,
     StringSelectMenuBuilder,
     ActionRowBuilder,
-    AttachmentBuilder,
-    ButtonBuilder,
-    ButtonStyle
+    AttachmentBuilder
 } = require('discord.js');
 
 const mongoose = require('mongoose');
@@ -59,6 +57,16 @@ const tablaSchema = new mongoose.Schema({
 });
 const Tabla = mongoose.models.Tabla || mongoose.model('Tabla', tablaSchema);
 
+const autoRoleMenuSchema = new mongoose.Schema({
+    guildId: { type: String, required: true },
+    nombreId: { type: String, required: true },
+    roles: [{ roleId: String, label: String, description: String }],
+    precio: { type: Number, default: 0 },
+    nivelMinimo: { type: Number, default: 1 },
+    propietarioId: { type: String, default: null }
+});
+const AutoRoleMenu = mongoose.models.AutoRoleMenu || mongoose.model('AutoRoleMenu', autoRoleMenuSchema);
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -67,16 +75,6 @@ const client = new Client({
         GatewayIntentBits.GuildMembers
     ]
 });
-
-const autoRoleMenuSchema = new mongoose.Schema({
-    guildId: { type: String, required: true },
-    nombreId: { type: String, required: true },
-    roles: [{ roleId: String, label: String, description: String }],
-    precio: { type: Number, default: 0 },
-    nivelMinimo: { type: Number, default: 1 },
-    propietarioId: { type: String, default: null }
-}, { collection: 'autorolemenus' }); // Forzamos el nombre exacto de la colección
-const AutoRoleMenu = mongoose.models.AutoRoleMenu || mongoose.model('AutoRoleMenu', autoRoleMenuSchema);
 
 // TU ID EXCLUSIVA DE PEPO
 const PEPO_ID = '1259006426978713620';
@@ -94,16 +92,8 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.error('❌ Error al conectar a MongoDB:', err));
 
 // --- COMANDOS SLASH DE PLUTUS ---
-const dataTiendaTarjetas = {
-    name: 'tiendatarjetas',
-    description: 'Abre la tienda de tarjetas y cosméticos de arte de Plutus'
-};
-
-const dataTiendaPerfil = {
-    name: 'tiendaperfil',
-    description: 'Abre la tienda de perfil para comprar menús de autoroles'
-};
-
+const dataTiendaTarjetas = { name: 'tiendatarjetas', description: 'Abre la tienda de tarjetas y cosméticos de arte de Plutus' };
+const dataTiendaPerfil = { name: 'tiendaperfil', description: 'Abre la tienda de perfil para comprar menús de autoroles' };
 const dataPerfil = { name: 'perfil', description: 'Abre tu armario de fondos, fuentes y tablas' };
 
 const dataCritica = {
@@ -279,7 +269,8 @@ const dataDelAuto = {
         { name: 'nombre', type: ApplicationCommandOptionType.String, description: 'Nombre ID del menú a borrar', required: true }
     ]
 };
-        client.once('ready', async () => {
+
+client.once('ready', async () => {
     console.log(`Bot Plutus prendido como ${client.user.tag} > :v`);
 
     try {
@@ -300,8 +291,8 @@ const dataDelAuto = {
 
     try {
         const comandosTotales = [
-        dataTiendaTarjetas, dataTiendaPerfil, dataPerfil, dataCritica, dataSetBg, 
-        dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar, dataDelAuto
+            dataTiendaTarjetas, dataTiendaPerfil, dataPerfil, dataCritica, dataSetBg, 
+            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar, dataDelAuto
         ];
 
         for (const [guildId, guild] of client.guilds.cache) {
@@ -313,30 +304,6 @@ const dataDelAuto = {
         console.error('❌ Error cargando comandos:', error);
     }
 });
-
-// --- HELPERS DE XP ---
-const obtenerXpTotal = (data) => {
-    let total = data.xp;
-    for (let i = 1; i < data.level; i++) {
-        total += (i + 1) * 100;
-    }
-    return total;
-};
-
-const recalcularProgreso = (data, nuevoXpTotal) => {
-    let lvl = 1;
-    let xpRestante = nuevoXpTotal;
-    let xpReq = (lvl + 1) * 100;
-
-    while (xpRestante >= xpReq) {
-        xpRestante -= xpReq;
-        lvl++;
-        xpReq = (lvl + 1) * 100;
-    }
-
-    data.level = lvl;
-    data.xp = xpRestante;
-};
 
 // --- RENDERIZADOR CANVAS BLINDADO DE PLUTUS ---
 async function generarTarjetaCritica({ 
@@ -599,6 +566,152 @@ client.on('interactionCreate', async interaction => {
             const guildId = interaction.guild.id;
             const userId = interaction.user.id;
 
+            if (commandName === 'tiendatarjetas') {
+                try {
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.deferReply({ ephemeral: true });
+                    }
+
+                    // Consultas ultra rápidas e independientes con .lean()
+                    const [fondos, fuentes, packs, tablas] = await Promise.all([
+                        Background.find({ guildId }).lean().catch(() => []),
+                        Font.find({ guildId }).lean().catch(() => []),
+                        Pack.find({ guildId }).lean().catch(() => []),
+                        Tabla.find({ guildId }).lean().catch(() => [])
+                    ]);
+
+                    const opciones = [];
+
+                    if (fondos) fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
+                    if (fuentes) fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
+                    if (packs) packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`.substring(0, 25), value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`.substring(0, 50), emoji: '📦' }));
+                    if (tablas) tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`.substring(0, 25), value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`.substring(0, 50), emoji: '🪞' }));
+
+                    if (opciones.length === 0) {
+                        return await interaction.editReply({ content: '⚠️ La tienda de tarjetas está vacía todavía alv. Sube cosméticos con `/setbg`, `/setfont`, etc.' });
+                    }
+
+                    const selectMenu = new StringSelectMenuBuilder()
+                        .setCustomId('tienda_tarjetas_menu')
+                        .setPlaceholder('🛒 Selecciona un cosmético para comprar...')
+                        .addOptions(opciones.slice(0, 25));
+
+                    const row = new ActionRowBuilder().addComponents(selectMenu);
+                    const embed = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle('🖼️ Tienda de Tarjetas y Arte de Plutus')
+                        .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs y tablas exclusivas para tu perfil.');
+
+                    return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
+
+                } catch (err) {
+                    console.error("❌ Error en /tiendatarjetas alv:", err);
+                    if (interaction.isRepliable()) {
+                        await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.' }).catch(() => {});
+                    }
+                }
+            }
+
+            if (commandName === 'tiendaperfil') {
+                try {
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.deferReply({ ephemeral: true });
+                    }
+
+                    const todosLosMenus = await AutoRoleMenu.find({ guildId });
+                    const opciones = [];
+
+                    if (todosLosMenus && todosLosMenus.length > 0) {
+                        todosLosMenus.forEach(m => {
+                            const precioMenu = m.precio;
+                            
+                            // Filtrado estricto: Ignora los menús gratuitos (0, null, indefinidos)
+                            if (precioMenu === null || precioMenu === undefined || precioMenu <= 0) {
+                                return;
+                            }
+
+                            const nombreLimpio = m.nombreId || 'desconocido';
+                            const totalRoles = m.roles ? m.roles.length : 0;
+
+                            opciones.push({ 
+                                label: `Menú Rol: ${nombreLimpio.toUpperCase()}`.substring(0, 25), 
+                                value: `comprar_autorol_${nombreLimpio}`, 
+                                description: `Precio: ${precioMenu} XP | Roles: ${totalRoles}`.substring(0, 50), 
+                                emoji: '✨' 
+                            });
+                        });
+                    }
+
+                    if (opciones.length === 0) {
+                        return await interaction.editReply({ content: '⚠️ No hay menús de autoroles de pago en la tienda actualmente alv.' });
+                    }
+
+                    const selectMenu = new StringSelectMenuBuilder()
+                        .setCustomId('tienda_perfil_menu')
+                        .setPlaceholder('✨ Selecciona un menú de autorol para desbloquear...')
+                        .addOptions(opciones.slice(0, 25));
+
+                    const row = new ActionRowBuilder().addComponents(selectMenu);
+                    const embed = new EmbedBuilder()
+                        .setColor('#00E676')
+                        .setTitle('✨ Tienda de Perfil y Autoroles de Plutus')
+                        .setDescription('Compra aquí los paquetes de autoroles exclusivos para reclamar tus roles en `/autorol`.');
+
+                    return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
+
+                } catch (err) {
+                    console.error("❌ Error en /tiendaperfil alv:", err);
+                    if (interaction.isRepliable()) {
+                        await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de perfil alv.' }).catch(() => {});
+                    }
+                }
+            }
+
+            if (commandName === 'autorol') {
+                try {
+                    const userProfile = await UserXP.findOne({ userId, guildId });
+                    const comprados = userProfile ? userProfile.autorolesComprados || [] : [];
+                    const todosLosMenus = await AutoRoleMenu.find({ guildId });
+
+                    // Filtrar: solo mostrar los gratis O los que el usuario ya compró
+                    const menusDisponibles = todosLosMenus.filter(m => {
+                        const precio = m.precio ?? 0;
+                        const esGratis = precio === 0;
+                        const yaLoCompro = comprados.includes(m.nombreId);
+                        return esGratis || yaLoCompro;
+                    });
+
+                    if (menusDisponibles.length === 0) {
+                        return await interaction.reply({ content: '❌ Todavía no tienes ningún menú de autoroles desbloqueado. ¡Pásate por `/tiendaperfil` para adquirirlos alv!', ephemeral: true });
+                    }
+
+                    const selectMenu = new StringSelectMenuBuilder()
+                        .setCustomId('seleccionar_menu_autorol')
+                        .setPlaceholder('🛒 Elige un menú de autoroles tuyo...')
+                        .addOptions(
+                            menusDisponibles.map(m => ({
+                                label: `Menú: ${m.nombreId.toUpperCase()}`.substring(0, 25),
+                                value: `ver_menu_${m.nombreId}`,
+                                description: `Roles: ${m.roles.length} | Desbloqueado alv`.substring(0, 50),
+                                emoji: '✨'
+                            })).slice(0, 25)
+                        );
+
+                    const row = new ActionRowBuilder().addComponents(selectMenu);
+                    const embed = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle('✨ Tus Menús de Autoroles')
+                        .setDescription('Selecciona abajo el menú de autoroles que compraste para equiparte tus roles alv.');
+
+                    return await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+                } catch (err) {
+                    console.error("❌ Error en /autorol alv:", err);
+                    if (interaction.isRepliable()) {
+                        await interaction.reply({ content: '❌ Hubo un error al abrir tus autoroles alv.', ephemeral: true }).catch(() => {});
+                    }
+                }
+            }
+
             if (commandName === 'perfil') {
                 await interaction.deferReply({ ephemeral: true });
 
@@ -690,7 +803,12 @@ client.on('interactionCreate', async interaction => {
                 }
                 if (todosMisTablas.length > 0) {
                     componentes.push(new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId('equipar_tabla_menu').setPlaceholder('🪞 Elegí una Tabla...').addOptions(todasMisTablas.map(t => ({ label: `Tabla: ${t}`, value: `equipar_tabla_${t}`, emoji: '🪞' })))
+                        new StringSelectMenuBuilder().setCustomId('equipar_pack_menu').setPlaceholder('📦 Elegí un Pack Combo...').addOptions(todosMisPacks.map(p => ({ label: `Pack: ${p}`, value: `equipar_pack_${p}`, emoji: '📦' })))
+                    ));
+                }
+                if (todosMisTablas.length > 0) {
+                    componentes.push(new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('equipar_tabla_menu').setPlaceholder('🪞 Elegí una Tabla...').addOptions(todosMisTablas.map(t => ({ label: `Tabla: ${t}`, value: `equipar_tabla_${t}`, emoji: '🪞' })))
                     ));
                 }
 
@@ -736,164 +854,6 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                        if (commandName === 'tiendatarjetas') {
-                try {
-                    // 1. LO PRIMERO ES DEFERIR LA RESPUESTA PARA QUE DISCORD NO MARQUE TIMEOUT
-                    if (!interaction.deferred && !interaction.replied) {
-                        await interaction.deferReply({ ephemeral: true });
-                    }
-
-                    const guildId = interaction.guild.id;
-
-                    // 2. CONSULTAS RÁPIDAS
-                    const [fondos, fuentes, packs, tablas] = await Promise.all([
-                        Background.find({ guildId }).lean().catch(() => []),
-                        Font.find({ guildId }).lean().catch(() => []),
-                        Pack.find({ guildId }).lean().catch(() => []),
-                        Tabla.find({ guildId }).lean().catch(() => [])
-                    ]);
-
-                    const opciones = [];
-
-                    if (fondos) fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
-                    if (fuentes) fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
-                    if (packs) packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`.substring(0, 25), value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`.substring(0, 50), emoji: '📦' }));
-                    if (tablas) tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`.substring(0, 25), value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`.substring(0, 50), emoji: '🪞' }));
-
-                    if (opciones.length === 0) {
-                        return await interaction.editReply({ content: '⚠️ La tienda de tarjetas está vacía todavía alv. Sube cosméticos con `/setbg`, `/setfont`, etc.' });
-                    }
-
-                    const selectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('tienda_tarjetas_menu')
-                        .setPlaceholder('🛒 Selecciona un cosmético para comprar...')
-                        .addOptions(opciones.slice(0, 25));
-
-                    const row = new ActionRowBuilder().addComponents(selectMenu);
-                    const embed = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle('🖼️ Tienda de Tarjetas y Arte de Plutus')
-                        .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs y tablas exclusivas para tu perfil.');
-
-                    return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
-
-                } catch (err) {
-                    console.error("❌ Error crítico en /tiendatarjetas alv:", err);
-                    if (interaction.isRepliable()) {
-                        if (interaction.deferred || interaction.replied) {
-                            await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.' }).catch(() => {});
-                        } else {
-                            await interaction.reply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.', ephemeral: true }).catch(() => {});
-                        }
-                    }
-                }
-                        }
-
-                                    if (commandName === 'tiendaperfil') {
-                try {
-                    if (!interaction.deferred && !interaction.replied) {
-                        await interaction.deferReply({ ephemeral: true });
-                    }
-
-                    const guildId = interaction.guild.id;
-                    
-                    // Traemos todos los menús del servidor
-                    const todosLosMenus = await AutoRoleMenu.find({ guildId });
-
-                    const opciones = [];
-
-                    if (todosLosMenus && todosLosMenus.length > 0) {
-                        todosLosMenus.forEach(m => {
-                            const precioMenu = m.precio;
-                            
-                            // 🛑 FILTRO ESTRICTO: Si es 0, null, undefined o menor/igual a 0, SE IGNORA DE LA TIENDA.
-                            if (precioMenu === null || precioMenu === undefined || precioMenu <= 0) {
-                                return; // Salta este menú y no lo pone en la tienda
-                            }
-
-                            const nombreLimpio = m.nombreId || 'desconocido';
-                            const totalRoles = m.roles ? m.roles.length : 0;
-
-                            opciones.push({ 
-                                label: `Menú Rol: ${nombreLimpio.toUpperCase()}`.substring(0, 25), 
-                                value: `comprar_autorol_${nombreLimpio}`, 
-                                description: `Precio: ${precioMenu} XP | Roles: ${totalRoles}`.substring(0, 50), 
-                                emoji: '✨' 
-                            });
-                        });
-                    }
-
-                    if (opciones.length === 0) {
-                        return await interaction.editReply({ content: '⚠️ No hay menús de autoroles de pago en la tienda actualmente alv.' });
-                    }
-
-                    const selectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('tienda_perfil_menu')
-                        .setPlaceholder('✨ Selecciona un menú de autorol para desbloquear...')
-                        .addOptions(opciones.slice(0, 25));
-
-                    const row = new ActionRowBuilder().addComponents(selectMenu);
-                    const embed = new EmbedBuilder()
-                        .setColor('#00E676')
-                        .setTitle('✨ Tienda de Perfil y Autoroles de Plutus')
-                        .setDescription('Compra aquí los paquetes de autoroles exclusivos para reclamar tus roles en `/autorol`.');
-
-                    return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
-
-                } catch (err) {
-                    console.error("❌ Error en /tiendaperfil alv:", err);
-                    if (interaction.isRepliable()) {
-                        await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de perfil alv.' }).catch(() => {});
-                    }
-                }
-                                    }
-            
-            
-                        if (commandName === 'autorol') {
-                try {
-                    const guildId = interaction.guild.id;
-                    const userId = interaction.user.id;
-
-                    // CORREGIDO: Usamos UserXP en lugar de User
-                    const userProfile = await UserXP.findOne({ userId, guildId });
-                    const comprados = userProfile ? userProfile.autorolesComprados || [] : [];
-
-                    const todosLosMenus = await AutoRoleMenu.find({ guildId });
-
-                    // Filtrar: solo mostrar los gratis o los que el usuario ya compró (o si eres Pepo)
-                    const menusDisponibles = todosLosMenus.filter(m => (m.precio ?? 0) === 0 || comprados.includes(m.nombreId) || userId === PEPO_ID);
-
-                    if (menusDisponibles.length === 0) {
-                        return await interaction.reply({ content: '❌ Todavía no tienes ningún menú de autoroles desbloqueado. ¡Pásate por `/tiendaperfil` para adquirirlos alv!', ephemeral: true });
-                    }
-
-                    const selectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('seleccionar_menu_autorol')
-                        .setPlaceholder('🛒 Elige un menú de autoroles tuyo...')
-                        .addOptions(
-                            menusDisponibles.map(m => ({
-                                label: `Menú: ${m.nombreId.toUpperCase()}`.substring(0, 25),
-                                value: `ver_menu_${m.nombreId}`,
-                                description: `Roles: ${m.roles.length} | Desbloqueado alv`.substring(0, 50),
-                                emoji: '✨'
-                            })).slice(0, 25)
-                        );
-
-                    const row = new ActionRowBuilder().addComponents(selectMenu);
-                    const embed = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle('✨ Tus Menús de Autoroles')
-                        .setDescription('Selecciona abajo el menú de autoroles que compraste para equiparte tus roles alv.');
-
-                    return await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
-                } catch (err) {
-                    console.error("❌ Error en /autorol alv:", err);
-                    if (interaction.isRepliable()) {
-                        await interaction.reply({ content: '❌ Hubo un error al abrir tus autoroles alv.', ephemeral: true }).catch(() => {});
-                    }
-                }
-                        }
-
             if (commandName === 'delauto') {
                 if (interaction.user.id !== PEPO_ID) {
                     return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
@@ -918,6 +878,41 @@ client.on('interactionCreate', async interaction => {
             const userId = interaction.user.id;
             const guildId = interaction.guild.id;
 
+            if (customId === 'tienda_perfil_menu') {
+                const seleccion = values[0];
+
+                if (seleccion.startsWith('comprar_autorol_')) {
+                    const nombreIdMenu = seleccion.replace('comprar_autorol_', '');
+                    const menuTarget = await AutoRoleMenu.findOne({ guildId, nombreId: nombreIdMenu });
+
+                    if (!menuTarget) {
+                        return await interaction.reply({ content: '❌ Ese menú de autorol ya no existe alv.', ephemeral: true });
+                    }
+
+                    let userProfile = await UserXP.findOne({ userId, guildId });
+                    if (!userProfile) {
+                        userProfile = new UserXP({ userId, guildId, xp: 0, level: 1, autorolesComprados: [] });
+                    }
+
+                    if (userProfile.autorolesComprados && userProfile.autorolesComprados.includes(nombreIdMenu)) {
+                        return await interaction.reply({ content: '⚠️ Ya tienes desbloqueado este menú de autorol en tu perfil alv. Búscalo en `/autorol`.', ephemeral: true });
+                    }
+
+                    const costo = menuTarget.precio ?? 0;
+                    if (userProfile.xp < costo) {
+                        return await interaction.reply({ content: `❌ No tienes suficiente XP alv. Te faltan ${costo - userProfile.xp} XP.`, ephemeral: true });
+                    }
+
+                    userProfile.xp -= costo;
+                    if (!userProfile.autorolesComprados) userProfile.autorolesComprados = [];
+                    userProfile.autorolesComprados.push(nombreIdMenu);
+
+                    await userProfile.save();
+
+                    return await interaction.reply({ content: `✅ ¡Compra de perfil exitosa alv! Has desbloqueado el menú **${nombreIdMenu.toUpperCase()}**. Ya puedes usarlo en \`/autorol\`.`, ephemeral: true });
+                }
+            }
+
             if (customId === 'seleccionar_menu_autorol') {
                 const nombreId = values[0].replace('ver_menu_', '');
                 const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
@@ -932,7 +927,7 @@ client.on('interactionCreate', async interaction => {
                 if (menuData.precio > 0) {
                     const yaLoCompro = userXpData?.autorolesComprados?.includes(menuData.nombreId);
                     if (!yaLoCompro && userId !== PEPO_ID) {
-                        return await interaction.reply({ content: `❌ Este menú de autorroles es de pago (**${menuData.precio} XP**). Debes comprarlo primero en la tienda (\`/comprar\`) alv.`, ephemeral: true });
+                        return await interaction.reply({ content: `❌ Este menú de autorroles es de pago (**${menuData.precio} XP**). Debes comprarlo primero en la tienda (\`/tiendaperfil\`) alv.`, ephemeral: true });
                     }
                 }
 
@@ -994,77 +989,6 @@ client.on('interactionCreate', async interaction => {
                 await member.roles.add(roleIdSeleccionado);
                 return await interaction.reply({ content: `✅ ¡Te has equipado el nuevo rol <@&${roleIdSeleccionado}> y se te reemplazó el color anterior alv!`, ephemeral: true });
             }
-
-                    if (interaction.customId === 'tienda_menu') {
-            const seleccion = interaction.values[0];
-
-            if (seleccion.startsWith('comprar_autorol_')) {
-                const nombreIdMenu = seleccion.replace('comprar_autorol_', '');
-                const menuTarget = await AutoRoleMenu.findOne({ guildId: interaction.guild.id, nombreId: nombreIdMenu });
-
-                if (!menuTarget) {
-                    return await interaction.reply({ content: '❌ Ese menú de autorol ya no existe alv.', ephemeral: true });
-                }
-
-                // CORREGIDO: Usamos UserXP en lugar de User
-                let userProfile = await UserXP.findOne({ userId: interaction.user.id, guildId: interaction.guild.id });
-                if (!userProfile) {
-                    userProfile = new UserXP({ userId: interaction.user.id, guildId: interaction.guild.id, xp: 0, level: 1, autorolesComprados: [] });
-                }
-
-                if (userProfile.autorolesComprados && userProfile.autorolesComprados.includes(nombreIdMenu)) {
-                    return await interaction.reply({ content: '⚠️ Ya tienes desbloqueado este menú de autorol alv. Búscalo en `/autorol`.', ephemeral: true });
-                }
-
-                const costo = menuTarget.precio ?? 0;
-                if (userProfile.xp < costo) {
-                    return await interaction.reply({ content: `❌ No tienes suficiente XP alv. Te faltan ${costo - userProfile.xp} XP.`, ephemeral: true });
-                }
-
-                userProfile.xp -= costo;
-                if (!userProfile.autorolesComprados) userProfile.autorolesComprados = [];
-                userProfile.autorolesComprados.push(nombreIdMenu);
-
-                await userProfile.save();
-
-                return await interaction.reply({ content: `✅ ¡Compra exitosa alv! Has desbloqueado el menú de autorol **${nombreIdMenu.toUpperCase()}**. Ve a \`/autorol\` para usarlo.`, ephemeral: true });
-            }
-                    }
-
-                    if (interaction.customId === 'tienda_perfil_menu') {
-            const seleccion = interaction.values[0];
-
-            if (seleccion.startsWith('comprar_autorol_')) {
-                const nombreIdMenu = seleccion.replace('comprar_autorol_', '');
-                const menuTarget = await AutoRoleMenu.findOne({ guildId: interaction.guild.id, nombreId: nombreIdMenu });
-
-                if (!menuTarget) {
-                    return await interaction.reply({ content: '❌ Ese menú de autorol ya no existe alv.', ephemeral: true });
-                }
-
-                let userProfile = await UserXP.findOne({ userId: interaction.user.id, guildId: interaction.guild.id });
-                if (!userProfile) {
-                    userProfile = new UserXP({ userId: interaction.user.id, guildId: interaction.guild.id, xp: 0, level: 1, autorolesComprados: [] });
-                }
-
-                if (userProfile.autorolesComprados && userProfile.autorolesComprados.includes(nombreIdMenu)) {
-                    return await interaction.reply({ content: '⚠️ Ya tienes desbloqueado este menú de autorol en tu perfil alv. Búscalo en `/autorol`.', ephemeral: true });
-                }
-
-                const costo = menuTarget.precio ?? 0;
-                if (userProfile.xp < costo) {
-                    return await interaction.reply({ content: `❌ No tienes suficiente XP alv. Te faltan ${costo - userProfile.xp} XP.`, ephemeral: true });
-                }
-
-                userProfile.xp -= costo;
-                if (!userProfile.autorolesComprados) userProfile.autorolesComprados = [];
-                userProfile.autorolesComprados.push(nombreIdMenu);
-
-                await userProfile.save();
-
-                return await interaction.reply({ content: `✅ ¡Compra de perfil exitosa alv! Has desbloqueado el menú **${nombreIdMenu.toUpperCase()}**. Ya puedes usarlo en \`/autorol\`.`, ephemeral: true });
-            }
-                    }
         }
     } catch (err) {
         console.error("Error crítico en interactionCreate alv:", err);
