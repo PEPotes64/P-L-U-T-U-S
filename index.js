@@ -736,7 +736,7 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                        if (commandName === 'tiendatarjetas') {
+                                    if (commandName === 'tiendatarjetas') {
                 try {
                     if (!interaction.deferred && !interaction.replied) {
                         await interaction.deferReply({ ephemeral: true });
@@ -744,19 +744,19 @@ client.on('interactionCreate', async interaction => {
 
                     const guildId = interaction.guild.id;
 
-                    const [fondos, fuentes, packs, tablas] = await Promise.all([
-                        Background.find({ guildId }),
-                        Font.find({ guildId }),
-                        Pack.find({ guildId }),
-                        Tabla.find({ guildId })
-                    ]);
+                    // Consultas separadas y protegidas para evitar bloqueos en cascada
+                    let fondos = [], fuentes = [], packs = [], tablas = [];
+                    try { fondos = await Background.find({ guildId }).lean(); } catch (e) { console.error("Error fondos:", e); }
+                    try { fuentes = await Font.find({ guildId }).lean(); } catch (e) { console.error("Error fuentes:", e); }
+                    try { packs = await Pack.find({ guildId }).lean(); } catch (e) { console.error("Error packs:", e); }
+                    try { tablas = await Tabla.find({ guildId }).lean(); } catch (e) { console.error("Error tablas:", e); }
 
                     const opciones = [];
 
-                    fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
-                    fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
-                    packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`.substring(0, 25), value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`.substring(0, 50), emoji: '📦' }));
-                    tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`.substring(0, 25), value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`.substring(0, 50), emoji: '🪞' }));
+                    if (fondos) fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
+                    if (fuentes) fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
+                    if (packs) packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`.substring(0, 25), value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`.substring(0, 50), emoji: '📦' }));
+                    if (tablas) tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`.substring(0, 25), value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`.substring(0, 50), emoji: '🪞' }));
 
                     if (opciones.length === 0) {
                         return await interaction.editReply({ content: '⚠️ La tienda de tarjetas está vacía todavía alv. Sube cosméticos con `/setbg`, `/setfont`, etc.' });
@@ -776,12 +776,13 @@ client.on('interactionCreate', async interaction => {
                     return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
 
                 } catch (err) {
-                    console.error("❌ Error en /tiendatarjetas alv:", err);
+                    console.error("❌ Error crítico en /tiendatarjetas alv:", err);
                     if (interaction.isRepliable()) {
                         await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.' }).catch(() => {});
                     }
                 }
-                        }
+                                    }
+            
 
                                     if (commandName === 'tiendaperfil') {
                 try {
