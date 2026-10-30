@@ -783,21 +783,29 @@ client.on('interactionCreate', async interaction => {
                 }
                         }
 
-                        if (commandName === 'tiendaperfil') {
+                                    if (commandName === 'tiendaperfil') {
                 try {
                     if (!interaction.deferred && !interaction.replied) {
                         await interaction.deferReply({ ephemeral: true });
                     }
 
                     const guildId = interaction.guild.id;
-                    const menusAutorol = await AutoRoleMenu.find({ guildId });
+                    
+                    // Traemos todos los menús del servidor
+                    const todosLosMenus = await AutoRoleMenu.find({ guildId });
 
                     const opciones = [];
 
-                    if (menusAutorol && menusAutorol.length > 0) {
-                        menusAutorol.forEach(m => {
+                    if (todosLosMenus && todosLosMenus.length > 0) {
+                        todosLosMenus.forEach(m => {
+                            const precioMenu = m.precio;
+                            
+                            // 🛑 FILTRO ESTRICTO: Si es 0, null, undefined o menor/igual a 0, SE IGNORA DE LA TIENDA.
+                            if (precioMenu === null || precioMenu === undefined || precioMenu <= 0) {
+                                return; // Salta este menú y no lo pone en la tienda
+                            }
+
                             const nombreLimpio = m.nombreId || 'desconocido';
-                            const precioMenu = m.precio ?? 0;
                             const totalRoles = m.roles ? m.roles.length : 0;
 
                             opciones.push({ 
@@ -810,7 +818,7 @@ client.on('interactionCreate', async interaction => {
                     }
 
                     if (opciones.length === 0) {
-                        return await interaction.editReply({ content: '⚠️ No hay menús de autoroles creados todavía alv. Usa `/setauto` primero.' });
+                        return await interaction.editReply({ content: '⚠️ No hay menús de autoroles de pago en la tienda actualmente alv.' });
                     }
 
                     const selectMenu = new StringSelectMenuBuilder()
@@ -832,7 +840,8 @@ client.on('interactionCreate', async interaction => {
                         await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de perfil alv.' }).catch(() => {});
                     }
                 }
-                        }
+                                    }
+            
             
                         if (commandName === 'autorol') {
                 try {
