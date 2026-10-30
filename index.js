@@ -92,7 +92,7 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.error('❌ Error al conectar a MongoDB:', err));
 
 // --- COMANDOS SLASH DE PLUTUS ---
-const dataTiendaTarjetas = { name: 'tiendatarjetas', description: 'Abre la tienda de tarjetas y cosméticos de arte de Plutus' };
+const dataComprar = { name: 'comprar', description: 'Abre la tienda de cosméticos de Plutus gastando tu XP' };
 const dataTiendaPerfil = { name: 'tiendaperfil', description: 'Abre la tienda de perfil para comprar menús de autoroles' };
 const dataPerfil = { name: 'perfil', description: 'Abre tu armario de fondos, fuentes y tablas' };
 
@@ -291,7 +291,7 @@ client.once('ready', async () => {
 
     try {
         const comandosTotales = [
-            dataTiendaTarjetas, dataTiendaPerfil, dataPerfil, dataCritica, dataSetBg, 
+            dataComprar, dataTiendaPerfil, dataPerfil, dataCritica, dataSetBg, 
             dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar, dataDelAuto
         ];
 
@@ -403,10 +403,10 @@ async function generarTarjetaCritica({
                 ctx.drawImage(imgDibujo, 40, 40, 380, 370);
                 ctx.restore();
             }
-        } catch (errDibujo) {
-            console.error("❌ [CANVAS] Error al cargar el dibujo:", errDibujo.message);
-        }
+                } catch (errDibujo) {
+        console.error("❌ [CANVAS] Error al cargar el dibujo:", errDibujo.message);
     }
+}
 
     const barX = 40;
     const barWidth = 400;
@@ -566,52 +566,6 @@ client.on('interactionCreate', async interaction => {
             const guildId = interaction.guild.id;
             const userId = interaction.user.id;
 
-            if (commandName === 'tiendatarjetas') {
-                try {
-                    if (!interaction.deferred && !interaction.replied) {
-                        await interaction.deferReply({ ephemeral: true });
-                    }
-
-                    // Consultas ultra rápidas e independientes con .lean()
-                    const [fondos, fuentes, packs, tablas] = await Promise.all([
-                        Background.find({ guildId }).lean().catch(() => []),
-                        Font.find({ guildId }).lean().catch(() => []),
-                        Pack.find({ guildId }).lean().catch(() => []),
-                        Tabla.find({ guildId }).lean().catch(() => [])
-                    ]);
-
-                    const opciones = [];
-
-                    if (fondos) fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
-                    if (fuentes) fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
-                    if (packs) packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`.substring(0, 25), value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`.substring(0, 50), emoji: '📦' }));
-                    if (tablas) tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`.substring(0, 25), value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`.substring(0, 50), emoji: '🪞' }));
-
-                    if (opciones.length === 0) {
-                        return await interaction.editReply({ content: '⚠️ La tienda de tarjetas está vacía todavía alv. Sube cosméticos con `/setbg`, `/setfont`, etc.' });
-                    }
-
-                    const selectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('tienda_tarjetas_menu')
-                        .setPlaceholder('🛒 Selecciona un cosmético para comprar...')
-                        .addOptions(opciones.slice(0, 25));
-
-                    const row = new ActionRowBuilder().addComponents(selectMenu);
-                    const embed = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle('🖼️ Tienda de Tarjetas y Arte de Plutus')
-                        .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs y tablas exclusivas para tu perfil.');
-
-                    return await interaction.editReply({ content: null, embeds: [embed], components: [row] });
-
-                } catch (err) {
-                    console.error("❌ Error en /tiendatarjetas alv:", err);
-                    if (interaction.isRepliable()) {
-                        await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda de tarjetas alv.' }).catch(() => {});
-                    }
-                }
-            }
-
             if (commandName === 'tiendaperfil') {
                 try {
                     if (!interaction.deferred && !interaction.replied) {
@@ -625,7 +579,7 @@ client.on('interactionCreate', async interaction => {
                         todosLosMenus.forEach(m => {
                             const precioMenu = m.precio;
                             
-                            // Filtrado estricto: Ignora los menús gratuitos (0, null, indefinidos)
+                            // Filtrado estricto: Ignora los menús gratuitos o sin precio
                             if (precioMenu === null || precioMenu === undefined || precioMenu <= 0) {
                                 return;
                             }
@@ -803,11 +757,6 @@ client.on('interactionCreate', async interaction => {
                 }
                 if (todosMisTablas.length > 0) {
                     componentes.push(new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId('equipar_pack_menu').setPlaceholder('📦 Elegí un Pack Combo...').addOptions(todosMisPacks.map(p => ({ label: `Pack: ${p}`, value: `equipar_pack_${p}`, emoji: '📦' })))
-                    ));
-                }
-                if (todosMisTablas.length > 0) {
-                    componentes.push(new ActionRowBuilder().addComponents(
                         new StringSelectMenuBuilder().setCustomId('equipar_tabla_menu').setPlaceholder('🪞 Elegí una Tabla...').addOptions(todosMisTablas.map(t => ({ label: `Tabla: ${t}`, value: `equipar_tabla_${t}`, emoji: '🪞' })))
                     ));
                 }
@@ -952,7 +901,7 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.update({ embeds: [embedRoles], components: [rowRoles] });
             }
 
-            if (customId.startsWith('autorol_select_')) {
+                        if (customId.startsWith('autorol_select_')) {
                 const nombreId = customId.replace('autorol_select_', '');
                 const roleIdSeleccionado = values[0];
 
@@ -1002,3 +951,5 @@ console.log('🔌 Conectando bot de Plutus...');
 client.login(process.env.DISCORD_TOKEN)
     .then(() => console.log('✅ ¡Login exitoso en el bot de Plutus alv!'))
     .catch(err => console.error('❌ ERROR CRÍTICO EN LOGIN ALV:', err));
+
+    
