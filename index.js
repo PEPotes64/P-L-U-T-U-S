@@ -67,6 +67,7 @@ const client = new Client({
         GatewayIntentBits.GuildMembers
     ]
 });
+
 const autoRoleMenuSchema = new mongoose.Schema({
     guildId: { type: String, required: true },
     nombreId: { type: String, required: true },
@@ -76,7 +77,6 @@ const autoRoleMenuSchema = new mongoose.Schema({
     propietarioId: { type: String, default: null }
 });
 const AutoRoleMenu = mongoose.models.AutoRoleMenu || mongoose.model('AutoRoleMenu', autoRoleMenuSchema);
-
 
 // TU ID EXCLUSIVA DE PEPO
 const PEPO_ID = '1259006426978713620';
@@ -262,8 +262,7 @@ const dataLimpiar = {
     name: 'limpiar',
     description: 'Borra todas las fuentes y tablas de Mongo (Exclusivo Pepo)'
 };
-
-client.once('ready', async () => {
+        client.once('ready', async () => {
     console.log(`Bot Plutus prendido como ${client.user.tag} > :v`);
 
     try {
@@ -451,12 +450,12 @@ async function generarTarjetaCritica({
     ctx.fillStyle = '#FF5252';
     ctx.fillText(`🔴 Negativo: ${negativoPct}%`, barX, barYNeg);
 
-        ctx.fillStyle = 'rgba(30, 35, 42, 0.8)';
+    ctx.fillStyle = 'rgba(30, 35, 42, 0.8)';
     ctx.beginPath();
     ctx.roundRect(barX, barYNeg + 6, barWidth, barHeight, 6);
     ctx.fill();
 
-        if (negativoPct > 0) {
+    if (negativoPct > 0) {
         const wRojo = (barWidth * negativoPct) / 100;
         ctx.fillStyle = '#FF5252';
         ctx.beginPath();
@@ -719,7 +718,42 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                        if (commandName === 'autorol') {
+            if (commandName === 'comprar') {
+                await interaction.deferReply({ ephemeral: true });
+                const guildId = interaction.guild.id;
+
+                const fondos = await Background.find({ guildId });
+                const fuentes = await Font.find({ guildId });
+                const packs = await Pack.find({ guildId });
+                const tablas = await Tabla.find({ guildId });
+                const menusAutorol = await AutoRoleMenu.find({ guildId, precio: { $gt: 0 } });
+
+                const opciones = [];
+                fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`, value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`, emoji: '🖼️' }));
+                fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`, value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`, emoji: '🔤' }));
+                packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`, value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`, emoji: '📦' }));
+                tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`, value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`, emoji: '🪞' }));
+                menusAutorol.forEach(m => opciones.push({ label: `Menú Autorol: ${m.nombreId.toUpperCase()}`, value: `comprar_autorol_${m.nombreId}`, description: `Precio: ${m.precio} XP`, emoji: '✨' }));
+
+                if (opciones.length === 0) {
+                    return await interaction.editReply({ content: '⚠️ La tienda está vacía todavía alv.' });
+                }
+
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId('tienda_menu')
+                    .setPlaceholder('🛒 Selecciona un artículo para comprar...')
+                    .addOptions(opciones.slice(0, 25));
+
+                const row = new ActionRowBuilder().addComponents(selectMenu);
+                const embed = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
+                    .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs, tablas y menús de autoroles exclusivos.');
+
+                return await interaction.editReply({ embeds: [embed], components: [row] });
+            }
+
+            if (commandName === 'autorol') {
                 const guildId = interaction.guild.id;
                 const menusDisponibles = await AutoRoleMenu.find({ guildId });
 
@@ -746,8 +780,7 @@ client.on('interactionCreate', async interaction => {
                     .setDescription('Selecciona abajo el menú de autoroles que quieres abrir para equiparte tus roles alv.');
 
                 return await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
-             }
-        
+            }
         }
 
         // 2. MENÚS DESPLEGABLES (SELECT MENUS)
@@ -756,36 +789,44 @@ client.on('interactionCreate', async interaction => {
             const userId = interaction.user.id;
             const guildId = interaction.guild.id;
 
-                    if (customId === 'seleccionar_menu_autorol') {
-            const nombreId = values[0].replace('ver_menu_', '');
-            const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
+            if (customId === 'seleccionar_menu_autorol') {
+                const nombreId = values[0].replace('ver_menu_', '');
+                const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
 
-            if (!menuData) return await interaction.reply({ content: '❌ Este menú ya no existe alv.', ephemeral: true });
+                if (!menuData) return await interaction.reply({ content: '❌ Este menú ya no existe alv.', ephemeral: true });
 
-            if (menuData.propietarioId && menuData.propietarioId !== userId) {
-                return await interaction.reply({ content: `❌ Este menú de autoroles es **exclusivo** y pertenece a otro usuario alv.`, ephemeral: true });
-            }
+                if (menuData.propietarioId && menuData.propietarioId !== userId) {
+                    return await interaction.reply({ content: `❌ Este menú de autorroles es **exclusivo** y pertenece a otro usuario alv.`, ephemeral: true });
+                }
 
-            const selectMenuRoles = new StringSelectMenuBuilder()
-                .setCustomId(`autorol_select_${menuData.nombreId}`)
-                .setPlaceholder(`📂 Selecciona un rol de: ${menuData.nombreId}`)
-                .addOptions(
-                    menuData.roles.map(r => ({
-                        label: r.label,
-                        value: r.roleId,
-                        description: `Reclamar rol ${r.label}`,
-                        emoji: '🔹'
-                    }))
-                );
-
-            const rowRoles = new ActionRowBuilder().addComponents(selectMenuRoles);
-            const embedRoles = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle(`✨ Menú de Autoroles: ${menuData.nombreId.toUpperCase()}`)
-                .setDescription(`Usa el menú desplegable de abajo para equiparte o quitarte el rol.\n\n• **Precio:** ${menuData.precio > 0 ? `${menuData.precio} XP` : 'Gratis'}\n• **Nivel Mínimo:** ${menuData.nivelMinimo}`);
-
-            return await interaction.update({ embeds: [embedRoles], components: [rowRoles] });
+                let userXpData = await UserXP.findOne({ userId, guildId });
+                if (menuData.precio > 0) {
+                    const yaLoCompro = userXpData?.autorolesComprados?.includes(menuData.nombreId);
+                    if (!yaLoCompro && userId !== PEPO_ID) {
+                        return await interaction.reply({ content: `❌ Este menú de autorroles es de pago (**${menuData.precio} XP**). Debes comprarlo primero en la tienda (\`/comprar\`) alv.`, ephemeral: true });
                     }
+                }
+
+                const selectMenuRoles = new StringSelectMenuBuilder()
+                    .setCustomId(`autorol_select_${menuData.nombreId}`)
+                    .setPlaceholder(`📂 Selecciona un rol de: ${menuData.nombreId}`)
+                    .addOptions(
+                        menuData.roles.map(r => ({
+                            label: r.label,
+                            value: r.roleId,
+                            description: `Reclamar rol ${r.label}`,
+                            emoji: '🔹'
+                        }))
+                    );
+
+                const rowRoles = new ActionRowBuilder().addComponents(selectMenuRoles);
+                const embedRoles = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`✨ Menú de Autoroles: ${menuData.nombreId.toUpperCase()}`)
+                    .setDescription(`Usa el menú desplegable de abajo para equiparte o quitarte el rol.\n\n• **Precio:** ${menuData.precio > 0 ? `${menuData.precio} XP` : 'Gratis'}\n• **Nivel Mínimo:** ${menuData.nivelMinimo}`);
+
+                return await interaction.update({ embeds: [embedRoles], components: [rowRoles] });
+            }
 
             if (customId.startsWith('autorol_select_')) {
                 const nombreId = customId.replace('autorol_select_', '');
@@ -802,51 +843,136 @@ client.on('interactionCreate', async interaction => {
                     return await interaction.reply({ content: `❌ Necesitas ser **Nivel ${menuData.nivelMinimo}** para reclamar este rol.`, ephemeral: true });
                 }
 
-                if (menuData.precio > 0 && xpUsuario < menuData.precio) {
-                    return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP**.`, ephemeral: true });
+                const member = interaction.member;
+
+                if (member.roles.cache.has(roleIdSeleccionado)) {
+                    await member.roles.remove(roleIdSeleccionado);
+                    return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}> alv.`, ephemeral: true });
                 }
 
-                                        const member = interaction.member;
+                if (menuData.nombreId.toLowerCase().includes('color')) {
+                    const menusDeColores = await AutoRoleMenu.find({ guildId: interaction.guildId, nombreId: { $regex: /color/i } });
+                    let todosLosRolesDeColoresIds = [];
+                    menusDeColores.forEach(m => {
+                        m.roles.forEach(r => todosLosRolesDeColoresIds.push(r.roleId));
+                    });
 
-                    // Si ya tiene exactamente ese rol puesto, se lo quitamos (comportamiento de toggle)
-                    if (member.roles.cache.has(roleIdSeleccionado)) {
-                        await member.roles.remove(roleIdSeleccionado);
-                        return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}> alv.`, ephemeral: true });
+                    const rolesColoresAEliminar = member.roles.cache.filter(role => todosLosRolesDeColoresIds.includes(role.id));
+                    if (rolesColoresAEliminar.size > 0) {
+                        await member.roles.remove(rolesColoresAEliminar);
+                    }
+                }
+
+                await member.roles.add(roleIdSeleccionado);
+                return await interaction.reply({ content: `✅ ¡Te has equipado el nuevo rol <@&${roleIdSeleccionado}> y se te reemplazó el color anterior alv!`, ephemeral: true });
+            }
+
+            if (customId === 'tienda_menu') {
+                await interaction.deferReply({ ephemeral: true });
+                const opcion = values[0];
+
+                let userXpData = await UserXP.findOne({ userId, guildId });
+                if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
+
+                const xpTotalActual = obtenerXpTotal(userXpData);
+
+                if (opcion.startsWith('comprar_autorol_')) {
+                    const menuId = opcion.replace('comprar_autorol_', '');
+                    const menuObj = await AutoRoleMenu.findOne({ guildId, nombreId: menuId });
+                    if (!menuObj) return await interaction.editReply({ content: '❌ El menú de autorroles ya no existe alv.' });
+
+                    if (userXpData.autorolesComprados && userXpData.autorolesComprados.includes(menuId)) {
+                        return await interaction.editReply({ content: '❌ Ya compraste este menú de autorroles anteriormente alv.' });
                     }
 
-                    // Si el menú actual es de colores, vamos a limpiar CUALQUIER OTRO rol de color que tenga en cualquier otro menú de colores
-                    if (menuData.nombreId.toLowerCase().includes('color')) {
-                        // Buscamos TODOS los menús de la base de datos que tengan "color" en su nombreId
-                        const menusDeColores = await AutoRoleMenu.find({ guildId: interaction.guildId, nombreId: { $regex: /color/i } });
-                        
-                        // Juntamos todos los IDs de roles de esos menús de colores
-                        let todosLosRolesDeColoresIds = [];
-                        menusDeColores.forEach(m => {
-                            m.roles.forEach(r => todosLosRolesDeColoresIds.push(r.roleId));
-                        });
-
-                        // Filtramos si el usuario ya tenía puesto alguno de esos roles de colores de cualquier menú
-                        const rolesColoresAEliminar = member.roles.cache.filter(role => todosLosRolesDeColoresIds.includes(role.id));
-
-                        // Si tenía un color de otro menú, se lo quitamos en chinga
-                        if (rolesColoresAEliminar.size > 0) {
-                            await member.roles.remove(rolesColoresAEliminar);
-                        }
+                    if (xpTotalActual < menuObj.precio) {
+                        return await interaction.editReply({ content: `❌ No tienes suficiente XP. Necesitas **${menuObj.precio} XP** (Tienes: ${xpTotalActual} XP).` });
                     }
 
-                    // Cobramos XP si el menú tiene precio
-                    if (menuData.precio > 0) {
-                        if (userXpData.xp < menuData.precio) {
-                            return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP** alv.`, ephemeral: true });
-                        }
-                        userXpData.xp -= menuData.precio;
-                        await userXpData.save();
-                    }
+                    const botones = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`exec_comprar_autorol_${menuId}`).setLabel('🛒 Confirmar Compra de Menú').setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+                    );
 
-                    // Le ponemos el nuevo rol seleccionado
-                    await member.roles.add(roleIdSeleccionado);
+                    const embedPreview = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle(`✨ Comprar Menú de Autoroles: ${menuId.toUpperCase()}`)
+                        .setDescription(`Desbloquea acceso completo a este menú de roles.\nPrecio: **${menuObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
 
-                    return await interaction.reply({ content: `✅ ¡Te has equipado el nuevo rol <@&${roleIdSeleccionado}> y se te reemplazó el color anterior alv!`, ephemeral: true });
+                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
+                }
+
+                if (opcion.startsWith('comprar_bg_')) {
+                    const bgId = opcion.replace('comprar_bg_', '');
+                    const bgObj = await Background.findOne({ guildId, nombreId: bgId });
+                    if (!bgObj) return await interaction.editReply({ content: '❌ El fondo ya no existe alv.' });
+
+                    const botones = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`exec_comprar_bg_${bgId}`).setLabel('🛒 Confirmar Compra').setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+                    );
+
+                    const embedPreview = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle(`🖼️ Previsualización de Fondo: ${bgId}`)
+                        .setDescription(`Precio: **${bgObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
+
+                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
+                }
+
+                if (opcion.startsWith('comprar_font_')) {
+                    const fontId = opcion.replace('comprar_font_', '');
+                    const fontObj = await Font.findOne({ guildId, nombreId: fontId });
+                    if (!fontObj) return await interaction.editReply({ content: '❌ La fuente ya no existe alv.' });
+
+                    const botones = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`exec_comprar_font_${fontId}`).setLabel('🛒 Confirmar Compra').setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+                    );
+
+                    const embedPreview = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle(`🔤 Previsualización de Fuente: ${fontId}`)
+                        .setDescription(`Precio: **${fontObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
+
+                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
+                }
+
+                if (opcion.startsWith('comprar_pack_')) {
+                    const packId = opcion.replace('comprar_pack_', '');
+                    const packObj = await Pack.findOne({ guildId, nombreId: packId });
+                    if (!packObj) return await interaction.editReply({ content: '❌ El pack ya no existe alv.' });
+
+                    const botones = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`exec_comprar_pack_${packId}`).setLabel('🛒 Confirmar Compra').setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+                    );
+
+                    const embedPreview = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle(`📦 Previsualización de Pack: ${packId}`)
+                        .setDescription(`Precio: **${packObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
+
+                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
+                }
+
+                if (opcion.startsWith('comprar_tabla_')) {
+                    const tablaId = opcion.replace('comprar_tabla_', '');
+                    const tablaObj = await Tabla.findOne({ guildId, nombreId: tablaId });
+                    if (!tablaObj) return await interaction.editReply({ content: '❌ La tabla ya no existe alv.' });
+
+                    const botones = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`exec_comprar_tabla_${tablaId}`).setLabel('🛒 Confirmar Compra').setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId('cancelar_compra').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+                    );
+
+                    const embedPreview = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle(`🪞 Previsualización de Tabla: ${tablaId}`)
+                        .setDescription(`Precio: **${tablaObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
+
+                    return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
+                }
             }
 
             if (customId.startsWith('equipar_')) {
@@ -878,6 +1004,86 @@ client.on('interactionCreate', async interaction => {
             if (customId === 'cancelar_compra') {
                 return await interaction.update({ content: '❌ Compra cancelada alv.', embeds: [], files: [], components: [] });
             }
+
+            if (customId.startsWith('exec_comprar_')) {
+                await interaction.deferUpdate();
+                const partes = customId.replace('exec_comprar_', '').split('_');
+                const tipo = partes[0];
+                const itemId = partes.slice(1).join('_');
+                const userId = interaction.user.id;
+                const guildId = interaction.guild.id;
+
+                let userXpData = await UserXP.findOne({ userId, guildId });
+                if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
+                const xpTotalActual = obtenerXpTotal(userXpData);
+
+                if (tipo === 'autorol') {
+                    const menuObj = await AutoRoleMenu.findOne({ guildId, nombreId: itemId });
+                    if (!menuObj || xpTotalActual < menuObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el menú ya no existe.', ephemeral: true });
+
+                    recalcularProgreso(userXpData, xpTotalActual - menuObj.precio);
+                    if (!userXpData.autorolesComprados) userXpData.autorolesComprados = [];
+                    if (!userXpData.autorolesComprados.includes(itemId)) userXpData.autorolesComprados.push(itemId);
+                    await userXpData.save();
+
+                    return await interaction.editReply({ content: `✨ ¡Compra exitosa! Compraste el menú de autorroles **${itemId}** alv Bv :v. Ya puedes usarlo en \`/autorol\`.`, embeds: [], files: [], components: [] });
+                }
+
+                if (tipo === 'bg') {
+                    const bgObj = await Background.findOne({ guildId, nombreId: itemId });
+                    if (!bgObj || xpTotalActual < bgObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el fondo ya no existe.', ephemeral: true });
+
+                    recalcularProgreso(userXpData, xpTotalActual - bgObj.precio);
+                    if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
+                    if (!userXpData.cartelesComprados.includes(itemId)) userXpData.cartelesComprados.push(itemId);
+                    userXpData.cartelEquipado = itemId;
+                    await userXpData.save();
+                    return await interaction.editReply({ content: `🖼️ ¡Compra exitosa! Te compraste y equipaste el fondo **${itemId}** alv Bv :v.` });
+                }
+
+                if (tipo === 'font') {
+                    const fontObj = await Font.findOne({ guildId, nombreId: itemId });
+                    if (!fontObj || xpTotalActual < fontObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la fuente ya no existe.', ephemeral: true });
+
+                    recalcularProgreso(userXpData, xpTotalActual - fontObj.precio);
+                    if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
+                    if (!userXpData.fuentesCompradas.includes(itemId)) userXpData.fuentesCompradas.push(itemId);
+                    userXpData.fuenteEquipada = itemId;
+                    await userXpData.save();
+                    return await interaction.editReply({ content: `🔤 ¡Compra exitosa! Te compraste y equipaste la fuente **${itemId}** alv Bv :v.` });
+                }
+
+                if (tipo === 'pack') {
+                    const packObj = await Pack.findOne({ guildId, nombreId: itemId });
+                    if (!packObj || xpTotalActual < packObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el pack ya no existe.', ephemeral: true });
+
+                    recalcularProgreso(userXpData, xpTotalActual - packObj.precio);
+                    if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
+                    if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
+                    if (!userXpData.packsComprados) userXpData.packsComprados = [];
+
+                    if (!userXpData.cartelesComprados.includes(packObj.fondoNombreId)) userXpData.cartelesComprados.push(packObj.fondoNombreId);
+                    if (!userXpData.fuentesCompradas.includes(packObj.fuenteNombreId)) userXpData.fuentesCompradas.push(packObj.fuenteNombreId);
+                    if (!userXpData.packsComprados.includes(itemId)) userXpData.packsComprados.push(itemId);
+
+                    userXpData.cartelEquipado = packObj.fondoNombreId;
+                    userXpData.fuenteEquipada = packObj.fuenteNombreId;
+                    await userXpData.save();
+                    return await interaction.editReply({ content: `📦 ¡Compra exitosa! Te compraste y equipaste el pack combo **${itemId}** alv Bv :v.` });
+                }
+
+                if (tipo === 'tabla') {
+                    const tablaObj = await Tabla.findOne({ guildId, nombreId: itemId });
+                    if (!tablaObj || xpTotalActual < tablaObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la tabla ya no existe.', ephemeral: true });
+
+                    recalcularProgreso(userXpData, xpTotalActual - tablaObj.precio);
+                    if (!userXpData.tablasCompradas) userXpData.tablasCompradas = [];
+                    if (!userXpData.tablasCompradas.includes(itemId)) userXpData.tablasCompradas.push(itemId);
+                    userXpData.tablaEquipada = itemId;
+                    await userXpData.save();
+                    return await interaction.editReply({ content: `🪞 ¡Compra exitosa! Te compraste y equipaste la tabla **${itemId}** alv Bv :v.` });
+                }
+            }
         }
 
     } catch (err) {
@@ -887,585 +1093,8 @@ client.on('interactionCreate', async interaction => {
         }
     }
 });
-                    
-
-// --- MANEJADOR DE SELECCIONES DE LA TIENDA Y MENÚS ---
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
-
-    const { customId, values } = interaction;
-    const userId = interaction.user.id;
-    const guildId = interaction.guild.id;
-
-    try {
-        // --- MANEJADOR DE AUTOROLES ---
-        if (customId.startsWith('autorol_select_')) {
-            const nombreId = customId.replace('autorol_select_', '');
-            const roleIdSeleccionado = values[0];
-
-            const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
-            if (!menuData) return await interaction.reply({ content: '❌ Este menú ya no existe alv.', ephemeral: true });
-
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            const nivelUsuario = userXpData ? userXpData.level : 1;
-            const xpUsuario = userXpData ? userXpData.xp : 0;
-
-            if (nivelUsuario < menuData.nivelMinimo) {
-                return await interaction.reply({ content: `❌ Necesitas ser **Nivel ${menuData.nivelMinimo}** para reclamar este rol (Tu nivel actual: ${nivelUsuario}).`, ephemeral: true });
-            }
-
-            if (menuData.precio > 0 && xpUsuario < menuData.precio) {
-                return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP** (Tienes: ${xpUsuario} XP).`, ephemeral: true });
-            }
-
-            const member = interaction.member;
-            const role = interaction.guild.roles.cache.get(roleIdSeleccionado);
-            if (!role) return await interaction.reply({ content: '❌ El rol seleccionado ya no existe en el servidor.', ephemeral: true });
-
-            if (member.roles.cache.has(roleIdSeleccionado)) {
-                await member.roles.remove(roleIdSeleccionado);
-                return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}>.`, ephemeral: true });
-            } else {
-                if (menuData.precio > 0) {
-                    userXpData.xp -= menuData.precio;
-                    await userXpData.save();
-                }
-                await member.roles.add(roleIdSeleccionado);
-                return await interaction.reply({ content: `✅ ¡Te has equipado con éxito el rol <@&${roleIdSeleccionado}>! ${menuData.precio > 0 ? `(Se te descontaron ${menuData.precio} XP)` : ''}`, ephemeral: true });
-            }
-        }
-        
-         // --- MANEJADOR DE SELECCIONES DE LA TIENDA Y MENÚS ---
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
-
-    const { customId, values } = interaction;
-    const userId = interaction.user.id;
-    const guildId = interaction.guild.id;
-
-    try {
-        // --- MANEJADOR DE AUTOROLES ---
-        if (customId.startsWith('autorol_select_')) {
-            const nombreId = customId.replace('autorol_select_', '');
-            const roleIdSeleccionado = values[0];
-
-            const menuData = await AutoRoleMenu.findOne({ guildId, nombreId });
-            if (!menuData) return await interaction.reply({ content: '❌ Este menú ya no existe alv.', ephemeral: true });
-
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            const nivelUsuario = userXpData ? userXpData.level : 1;
-            const xpUsuario = userXpData ? userXpData.xp : 0;
-
-            if (nivelUsuario < menuData.nivelMinimo) {
-                return await interaction.reply({ content: `❌ Necesitas ser **Nivel ${menuData.nivelMinimo}** para reclamar este rol (Tu nivel actual: ${nivelUsuario}).`, ephemeral: true });
-            }
-
-            if (menuData.precio > 0 && xpUsuario < menuData.precio) {
-                return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP** (Tienes: ${xpUsuario} XP).`, ephemeral: true });
-            }
-
-            const member = interaction.member;
-            const role = interaction.guild.roles.cache.get(roleIdSeleccionado);
-            if (!role) return await interaction.reply({ content: '❌ El rol seleccionado ya no existe en el servidor.', ephemeral: true });
-
-            if (member.roles.cache.has(roleIdSeleccionado)) {
-                await member.roles.remove(roleIdSeleccionado);
-                return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}>.`, ephemeral: true });
-            } else {
-                if (menuData.precio > 0) {
-                    userXpData.xp -= menuData.precio;
-                    await userXpData.save();
-                }
-                await member.roles.add(roleIdSeleccionado);
-                return await interaction.reply({ content: `✅ ¡Te has equipado con éxito el rol <@&${roleIdSeleccionado}>! ${menuData.precio > 0 ? `(Se te descontaron ${menuData.precio} XP)` : ''}`, ephemeral: true });
-            }
-        }
-
-        // --- TIENDA (PREVISUALIZACIONES) ---
-        if (customId === 'tienda_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const opcion = values[0];
-
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
-
-            const xpTotalActual = obtenerXpTotal(userXpData);
-
-            if (opcion.startsWith('comprar_bg_')) {
-                const bgId = opcion.replace('comprar_bg_', '');
-                const bgObj = await Background.findOne({ guildId, nombreId: bgId });
-                if (!bgObj) return await interaction.editReply({ content: '❌ El fondo ya no existe alv.' });
-
-                const canvas = createCanvas(1000, 600);
-                const ctx = canvas.getContext('2d');
-                
-                try {
-                    const resBg = await fetch(bgObj.fondoUrl || bgObj.urlImagen);
-                    if (resBg.ok) {
-                        const img = await loadImage(Buffer.from(await resBg.arrayBuffer()));
-                        ctx.drawImage(img, 0, 0, 1000, 600);
-                    } else {
-                        ctx.fillStyle = '#1a1035';
-                        ctx.fillRect(0, 0, 1000, 600);
-                    }
-                } catch (e) {
-                    ctx.fillStyle = '#1a1035';
-                    ctx.fillRect(0, 0, 1000, 600);
-                }
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.beginPath();
-                ctx.roundRect(150, 220, 700, 160, 20);
-                ctx.fill();
-
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 36px sans-serif';
-                ctx.fillText(`🖼️ FONDO: ${bgId.toUpperCase()}`, 190, 290);
-
-                ctx.fillStyle = '#E2E2E8';
-                ctx.font = '22px sans-serif';
-                ctx.fillText(`Precio: ${bgObj.precio} XP | Req. Nivel: ${bgObj.nivelMinimo ?? 1}`, 190, 335);
-
-                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_bg_${bgId}.png` });
-                
-                const embedPreview = new EmbedBuilder()
-                    .setColor('#FFD700')
-                    .setTitle(`🖼️ Previsualización de Fondo: ${bgId}`)
-                    .setDescription(`Precio: **${bgObj.precio} XP**\nNivel Mínimo: **${bgObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
-                    .setImage(`attachment://preview_bg_${bgId}.png`);
-
-                const botones = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`exec_comprar_bg_${bgId}`)
-                        .setLabel('🛒 Confirmar Compra')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId('cancelar_compra')
-                        .setLabel('❌ Cancelar')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
-            }
-
-            if (opcion.startsWith('comprar_font_')) {
-                const fontId = opcion.replace('comprar_font_', '');
-                const fontObj = await Font.findOne({ guildId, nombreId: fontId });
-                if (!fontObj) return await interaction.editReply({ content: '❌ La fuente ya no existe alv.' });
-
-                let fuenteRegistrada = 'sans-serif';
-                try {
-                    const resFont = await fetch(fontObj.fontUrl);
-                    if (resFont.ok) {
-                        const fontBuffer = Buffer.from(await resFont.arrayBuffer());
-                        GlobalFonts.register(fontBuffer, fontId);
-                        fuenteRegistrada = fontId;
-                    }
-                } catch (e) {
-                    console.error("Error cargando fuente en preview:", e);
-                }
-
-                const canvas = createCanvas(1000, 600);
-                const ctx = canvas.getContext('2d');
-                
-                ctx.fillStyle = '#1a1035';
-                ctx.fillRect(0, 0, 1000, 600);
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-                ctx.beginPath();
-                ctx.roundRect(50, 40, 900, 520, 20);
-                ctx.fill();
-
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 28px sans-serif';
-                ctx.fillText(`🔤 FUENTE: ${fontId.toUpperCase()}`, 90, 95);
-
-                ctx.fillStyle = '#E2E2E8';
-                ctx.font = '18px sans-serif';
-                ctx.fillText(`Precio: ${fontObj.precio} XP | Req. Nivel: ${fontObj.nivelMinimo ?? 1}`, 90, 130);
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = `32px "${fuenteRegistrada}", sans-serif`;
-                ctx.fillText("A B C D E F G H I J K L M N O P Q R S T U V W X Y Z", 90, 210);
-                ctx.fillText("a b c d e f g h i j k l m n o p q r s t u v w x y z", 90, 280);
-                ctx.fillText("1 2 3 4 5 6 7 8 9 0  ! ? # $ @ & + - * /", 90, 350);
-
-                ctx.fillStyle = '#00E5FF';
-                ctx.font = `26px "${fuenteRegistrada}", sans-serif`;
-                ctx.fillText("Plutus y Pepo armando el imperio del arte alv > :v", 90, 450);
-
-                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_font_${fontId}.png` });
-                
-                const embedPreview = new EmbedBuilder()
-                    .setColor('#FFD700')
-                    .setTitle(`🔤 Previsualización de Fuente: ${fontId}`)
-                    .setDescription(`Precio: **${fontObj.precio} XP**\nNivel Mínimo: **${fontObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
-                    .setImage(`attachment://preview_font_${fontId}.png`);
-
-                const botones = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`exec_comprar_font_${fontId}`)
-                        .setLabel('🛒 Confirmar Compra')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId('cancelar_compra')
-                        .setLabel('❌ Cancelar')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
-            }
-
-            if (opcion.startsWith('comprar_pack_')) {
-                const packId = opcion.replace('comprar_pack_', '');
-                const packObj = await Pack.findOne({ guildId, nombreId: packId });
-                if (!packObj) return await interaction.editReply({ content: '❌ El pack ya no existe alv.' });
-
-                const bgObj = await Background.findOne({ guildId, nombreId: packObj.fondoNombreId });
-                const canvas = createCanvas(1000, 600);
-                const ctx = canvas.getContext('2d');
-                
-                try {
-                    if (bgObj && (bgObj.fondoUrl || bgObj.urlImagen)) {
-                        const resBg = await fetch(bgObj.fondoUrl || bgObj.urlImagen);
-                        if (resBg.ok) {
-                            const img = await loadImage(Buffer.from(await resBg.arrayBuffer()));
-                            ctx.drawImage(img, 0, 0, 1000, 600);
-                        } else {
-                            ctx.fillStyle = '#1a1035';
-                            ctx.fillRect(0, 0, 1000, 600);
-                        }
-                    } else {
-                        ctx.fillStyle = '#1a1035';
-                        ctx.fillRect(0, 0, 1000, 600);
-                    }
-                } catch (e) {
-                    ctx.fillStyle = '#1a1035';
-                    ctx.fillRect(0, 0, 1000, 600);
-                }
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.beginPath();
-                ctx.roundRect(150, 200, 700, 180, 20);
-                ctx.fill();
-
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 36px sans-serif';
-                ctx.fillText(`📦 PACK: ${packId.toUpperCase()}`, 190, 270);
-
-                ctx.fillStyle = '#E2E2E8';
-                ctx.font = '20px sans-serif';
-                ctx.fillText(`Fondo: ${packObj.fondoNombreId} | Fuente: ${packObj.fuenteNombreId}`, 190, 315);
-                ctx.fillText(`Precio: ${packObj.precio} XP | Req. Nivel: ${packObj.nivelMinimo ?? 1}`, 190, 350);
-
-                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_pack_${packId}.png` });
-                
-                const embedPreview = new EmbedBuilder()
-                    .setColor('#FFD700')
-                    .setTitle(`📦 Previsualización de Pack: ${packId}`)
-                    .setDescription(`Incluye Fondo y Fuente.\nPrecio: **${packObj.precio} XP**\nNivel Mínimo: **${packObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
-                    .setImage(`attachment://preview_pack_${packId}.png`);
-
-                const botones = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`exec_comprar_pack_${packId}`)
-                        .setLabel('🛒 Confirmar Compra')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId('cancelar_compra')
-                        .setLabel('❌ Cancelar')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
-            }
-
-            if (opcion.startsWith('comprar_tabla_')) {
-                const tablaId = opcion.replace('comprar_tabla_', '');
-                const tablaObj = await Tabla.findOne({ guildId, nombreId: tablaId });
-                if (!tablaObj) return await interaction.editReply({ content: '❌ La tabla ya no existe alv.' });
-
-                const canvas = createCanvas(1000, 600);
-                const ctx = canvas.getContext('2d');
-                
-                try {
-                    const resTabla = await fetch(tablaObj.urlImagen || tablaObj.url);
-                    if (resTabla.ok) {
-                        const img = await loadImage(Buffer.from(await resTabla.arrayBuffer()));
-                        ctx.drawImage(img, 0, 0, 1000, 600);
-                    } else {
-                        ctx.fillStyle = '#1a1035';
-                        ctx.fillRect(0, 0, 1000, 600);
-                    }
-                } catch (e) {
-                    ctx.fillStyle = '#1a1035';
-                    ctx.fillRect(0, 0, 1000, 600);
-                }
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.beginPath();
-                ctx.roundRect(150, 220, 700, 160, 20);
-                ctx.fill();
-
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 36px sans-serif';
-                ctx.fillText(`🪞 TABLA: ${tablaId.toUpperCase()}`, 190, 290);
-
-                ctx.fillStyle = '#E2E2E8';
-                ctx.font = '22px sans-serif';
-                ctx.fillText(`Precio: ${tablaObj.precio} XP | Req. Nivel: ${tablaObj.nivelMinimo ?? 1}`, 190, 335);
-
-                const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `preview_tabla_${tablaId}.png` });
-                
-                const embedPreview = new EmbedBuilder()
-                    .setColor('#FFD700')
-                    .setTitle(`🪞 Previsualización de Tabla: ${tablaId}`)
-                    .setDescription(`Precio: **${tablaObj.precio} XP**\nNivel Mínimo: **${tablaObj.nivelMinimo ?? 1}**\nTu XP Actual: **${xpTotalActual} XP**`)
-                    .setImage(`attachment://preview_tabla_${tablaId}.png`);
-
-                const botones = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`exec_comprar_tabla_${tablaId}`)
-                        .setLabel('🛒 Confirmar Compra')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId('cancelar_compra')
-                        .setLabel('❌ Cancelar')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-                return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
-            }
-
-                        if (opcion.startsWith('comprar_autorol_')) {
-                const menuId = opcion.replace('comprar_autorol_', '');
-                const menuObj = await AutoRoleMenu.findOne({ guildId, nombreId: menuId });
-                if (!menuObj) return await interaction.editReply({ content: '❌ El menú de autorroles ya no existe alv.' });
-
-                if (userXpData.autorolesComprados && userXpData.autorolesComprados.includes(menuId)) {
-                    return await interaction.editReply({ content: '❌ Ya compraste este menú de autorroles anteriormente alv.' });
-                }
-
-                if (xpTotalActual < menuObj.precio) {
-                    return await interaction.editReply({ content: `❌ No tienes suficiente XP. Necesitas **${menuObj.precio} XP** (Tienes: ${xpTotalActual} XP).` });
-                }
-
-                const botones = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`exec_comprar_autorol_${menuId}`)
-                        .setLabel('🛒 Confirmar Compra de Menú')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId('cancelar_compra')
-                        .setLabel('❌ Cancelar')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-                const embedPreview = new EmbedBuilder()
-                    .setColor('#FFD700')
-                    .setTitle(`✨ Comprar Menú de Autoroles: ${menuId.toUpperCase()}`)
-                    .setDescription(`Desbloquea acceso completo a este menú de roles.\nPrecio: **${menuObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
-
-                return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
-                        }
-        }
-
-        // --- EQUIPAR COSMÉTICOS DESDE EL PERFIL ---
-        if (customId === 'equipar_tabla_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const tablaId = values[0].replace('equipar_tabla_', '').trim();
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId });
-            userXpData.tablaEquipada = tablaId;
-            await userXpData.save();
-            return await interaction.editReply({ content: `✅ ¡Te equipaste la tabla **"${tablaId}"** con éxito!` });
-        }
-
-        if (customId === 'equipar_cartel_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const cartelId = values[0].replace('equipar_cartel_', '');
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId });
-            userXpData.cartelEquipado = cartelId;
-            await userXpData.save();
-            return await interaction.editReply({ content: `🖼️ ¡Te equipaste el fondo **"${cartelId}"** con éxito!` });
-        }
-
-        if (customId === 'equipar_fuente_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const fuenteId = values[0].replace('equipar_fuente_', '');
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId });
-            userXpData.fuenteEquipada = fuenteId;
-            await userXpData.save();
-            return await interaction.editReply({ content: `🔤 ¡Te equipaste la fuente **"${fuenteId}"** con éxito!` });
-        }
-
-        if (customId === 'equipar_pack_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const packId = values[0].replace('equipar_pack_', '');
-            const packObj = await Pack.findOne({ guildId, nombreId: packId });
-            if (!packObj) return await interaction.editReply('❌ El pack ya no existe.');
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId });
-            userXpData.cartelEquipado = packObj.fondoNombreId;
-            userXpData.fuenteEquipada = packObj.fuenteNombreId;
-            await userXpData.save();
-            return await interaction.editReply({ content: `📦 ¡Te equipaste el pack combo **"${packId}"** con éxito!` });
-        }
-
-    } catch (err) {
-        console.error("Error en select menus de Plutus:", err);
-    }
-});
-
-        // --- EQUIPAR COSMÉTICOS DESDE EL PERFIL ---
-        if (customId === 'equipar_tabla_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const tablaId = values[0].replace('equipar_tabla_', '').trim();
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId });
-            userXpData.tablaEquipada = tablaId;
-            await userXpData.save();
-            return await interaction.editReply({ content: `✅ ¡Te equipaste la tabla **"${tablaId}"** con éxito!` });
-        }
-
-        if (customId === 'equipar_cartel_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const cartelId = values[0].replace('equipar_cartel_', '');
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId });
-            userXpData.cartelEquipado = cartelId;
-            await userXpData.save();
-            return await interaction.editReply({ content: `🖼️ ¡Te equipaste el fondo **"${cartelId}"** con éxito!` });
-        }
-
-        if (customId === 'equipar_fuente_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const fuenteId = values[0].replace('equipar_fuente_', '');
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId });
-            userXpData.fuenteEquipada = fuenteId;
-            await userXpData.save();
-            return await interaction.editReply({ content: `🔤 ¡Te equipaste la fuente **"${fuenteId}"** con éxito!` });
-        }
-
-        if (customId === 'equipar_pack_menu') {
-            await interaction.deferReply({ ephemeral: true });
-            const packId = values[0].replace('equipar_pack_', '');
-            const packObj = await Pack.findOne({ guildId, nombreId: packId });
-            if (!packObj) return await interaction.editReply('❌ El pack ya no existe.');
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId });
-            userXpData.cartelEquipado = packObj.fondoNombreId;
-            userXpData.fuenteEquipada = packObj.fuenteNombreId;
-            await userXpData.save();
-            return await interaction.editReply({ content: `📦 ¡Te equipaste el pack combo **"${packId}"** con éxito!` });
-        }
-
-    } catch (err) {
-        console.error("Error en select menus de Plutus:", err);
-    }
-});
-
-// --- MANEJADOR DE BOTONES (COMPRAS Y CONFIRMACIONES) ---
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isButton()) return;
-    
-    const { customId } = interaction;
-
-    try {
-        if (customId === 'cancelar_compra') {
-            return await interaction.update({ content: '❌ Compra cancelada alv.', embeds: [], files: [], components: [] });
-        }
-
-        if (customId.startsWith('exec_comprar_')) {
-            await interaction.deferUpdate();
-            const partes = customId.replace('exec_comprar_', '').split('_');
-            const tipo = partes[0];
-            const itemId = partes.slice(1).join('_');
-            const userId = interaction.user.id;
-            const guildId = interaction.guild.id;
-
-            let userXpData = await UserXP.findOne({ userId, guildId });
-            if (!userXpData) userXpData = new UserXP({ userId, guildId, xp: 0, level: 1 });
-            const xpTotalActual = obtenerXpTotal(userXpData);
-
-            if (tipo === 'bg') {
-                const bgObj = await Background.findOne({ guildId, nombreId: itemId });
-                if (!bgObj || xpTotalActual < bgObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el fondo ya no existe.', ephemeral: true });
-
-                recalcularProgreso(userXpData, xpTotalActual - bgObj.precio);
-                if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
-                if (!userXpData.cartelesComprados.includes(itemId)) userXpData.cartelesComprados.push(itemId);
-                userXpData.cartelEquipado = itemId;
-                await userXpData.save();
-                return await interaction.editReply({ content: `🖼️ ¡Compra exitosa! Te compraste y equipaste el fondo **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
-            }
-
-            if (tipo === 'font') {
-                const fontObj = await Font.findOne({ guildId, nombreId: itemId });
-                if (!fontObj || xpTotalActual < fontObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la fuente ya no existe.', ephemeral: true });
-
-                recalcularProgreso(userXpData, xpTotalActual - fontObj.precio);
-                if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
-                if (!userXpData.fuentesCompradas.includes(itemId)) userXpData.fuentesCompradas.push(itemId);
-                userXpData.fuenteEquipada = itemId;
-                await userXpData.save();
-                return await interaction.editReply({ content: `🔤 ¡Compra exitosa! Te compraste y equipaste la fuente **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
-            }
-
-            if (tipo === 'pack') {
-                const packObj = await Pack.findOne({ guildId, nombreId: itemId });
-                if (!packObj || xpTotalActual < packObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el pack ya no existe.', ephemeral: true });
-
-                recalcularProgreso(userXpData, xpTotalActual - packObj.precio);
-                if (!userXpData.cartelesComprados) userXpData.cartelesComprados = [];
-                if (!userXpData.fuentesCompradas) userXpData.fuentesCompradas = [];
-                if (!userXpData.packsComprados) userXpData.packsComprados = [];
-
-                if (!userXpData.cartelesComprados.includes(packObj.fondoNombreId)) userXpData.cartelesComprados.push(packObj.fondoNombreId);
-                if (!userXpData.fuentesCompradas.includes(packObj.fuenteNombreId)) userXpData.fuentesCompradas.push(packObj.fuenteNombreId);
-                if (!userXpData.packsComprados.includes(itemId)) userXpData.packsComprados.push(itemId);
-
-                userXpData.cartelEquipado = packObj.fondoNombreId;
-                userXpData.fuenteEquipada = packObj.fuenteNombreId;
-                await userXpData.save();
-                return await interaction.editReply({ content: `📦 ¡Compra exitosa! Te compraste y equipaste el pack combo **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
-            }
-
-            if (tipo === 'tabla') {
-                const tablaObj = await Tabla.findOne({ guildId, nombreId: itemId });
-                if (!tablaObj || xpTotalActual < tablaObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o la tabla ya no existe.', ephemeral: true });
-
-                recalcularProgreso(userXpData, xpTotalActual - tablaObj.precio);
-                if (!userXpData.tablasCompradas) userXpData.tablasCompradas = [];
-                if (!userXpData.tablasCompradas.includes(itemId)) userXpData.tablasCompradas.push(itemId);
-                userXpData.tablaEquipada = itemId;
-                await userXpData.save();
-                return await interaction.editReply({ content: `🪞 ¡Compra exitosa! Te compraste y equipaste la tabla **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
-            }
-
-                        if (tipo === 'autorol') {
-                const menuObj = await AutoRoleMenu.findOne({ guildId, nombreId: itemId });
-                if (!menuObj || xpTotalActual < menuObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el menú ya no existe.', ephemeral: true });
-
-                recalcularProgreso(userXpData, xpTotalActual - menuObj.precio);
-                if (!userXpData.autorolesComprados) userXpData.autorolesComprados = [];
-                if (!userXpData.autorolesComprados.includes(itemId)) userXpData.autorolesComprados.push(itemId);
-                await userXpData.save();
-
-                return await interaction.editReply({ content: `✨ ¡Compra exitosa! Compraste el menú de autorroles **${itemId}** alv Bv :v. Ya puedes usarlo en \`/autorol\`.`, embeds: [], files: [], components: [] });
-                        }
-            
-        }
-    } catch (err) {
-        console.error("Error en botones de compra de Plutus:", err);
-    }
-});
 
 console.log('🔌 Conectando bot de Plutus...');
 client.login(process.env.DISCORD_TOKEN)
     .then(() => console.log('✅ ¡Login exitoso en el bot de Plutus alv!'))
     .catch(err => console.error('❌ ERROR CRÍTICO EN LOGIN ALV:', err));
-                
