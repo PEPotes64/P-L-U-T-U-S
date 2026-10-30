@@ -967,6 +967,32 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
+const { crearTarjetaBienvenida } = require('./utils/welcomeCanvas');
+
+// Cuando el bot enciende
+client.on('ready', () => {
+    console.log(`¡Bot conectado como ${client.user.tag} alv! Bv`);
+});
+
+// --- AQUÍ MERITO PEGÁS EL EVENTO DE BIENVENIDA ---
+client.on('guildMemberAdd', async (member) => {
+    const canalId = '1447323114324103269';
+    const canalBienvenida = member.guild.channels.cache.get(canalId);
+    
+    if (!canalBienvenida) return;
+
+    try {
+        const tarjeta = await crearTarjetaBienvenida(member);
+        
+        await canalBienvenida.send({
+            content: `¡Qué onda ${member}! Pásatela chido y a darle alv Bv :v`,
+            files: [tarjeta]
+        });
+    } catch (error) {
+        console.error('Se cago la generación del banner de bienvenida:', error);
+    }
+});
+
 console.log('🔌 Conectando bot de Plutus...');
 client.login(process.env.DISCORD_TOKEN)
     .then(() => console.log('✅ ¡Login exitoso en el bot de Plutus alv!'))
