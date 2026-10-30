@@ -46,7 +46,7 @@ async function crearTarjeta(member, tipo = 'welcome') {
     if (tipo === 'welcome') {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 35px sans-serif';
-        ctx.fillText('¡BIENVENIDO A LOS PANAS!', 280, 220);
+        ctx.fillText('¡BIENVENIDO, AHORA ERES UN PANA!', 280, 220);
 
         ctx.fillStyle = '#ffaa00';
         ctx.font = 'bold 45px sans-serif';
@@ -58,7 +58,7 @@ async function crearTarjeta(member, tipo = 'welcome') {
     } else if (tipo === 'goodbye') {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 35px sans-serif';
-        ctx.fillText('HA SIDO UN GUSTO...', 280, 220);
+        ctx.fillText('HA SIDO UN DISGUSTO...', 280, 220);
 
         ctx.fillStyle = '#ff5555';
         ctx.font = 'bold 45px sans-serif';
@@ -66,11 +66,11 @@ async function crearTarjeta(member, tipo = 'welcome') {
 
         ctx.fillStyle = '#dddddd';
         ctx.font = '22px sans-serif';
-        ctx.fillText('Se fue del servidor alv...', 280, 330);
+        ctx.fillText('Se fue alv', 280, 330);
     } else if (tipo === 'ban') {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 35px sans-serif';
-        ctx.fillText('USUARIO BANEADO', 280, 220);
+        ctx.fillText('USUARIO VIOLADO', 280, 220);
 
         ctx.fillStyle = '#ff0000';
         ctx.font = 'bold 45px sans-serif';
@@ -78,7 +78,7 @@ async function crearTarjeta(member, tipo = 'welcome') {
 
         ctx.fillStyle = '#dddddd';
         ctx.font = '22px sans-serif';
-        ctx.fillText('Se lo llevó la verga por infractor alv', 280, 330);
+        ctx.fillText('El staff te metio la verga por pendejo cfff', 280, 330);
     }
 
     return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `${tipo}.png` });
