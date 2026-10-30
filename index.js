@@ -94,7 +94,16 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.error('❌ Error al conectar a MongoDB:', err));
 
 // --- COMANDOS SLASH DE PLUTUS ---
-const dataComprar = { name: 'comprar', description: 'Abre la tienda de cosméticos de Plutus gastando tu XP' };
+const dataTiendaTarjetas = {
+    name: 'tiendatarjetas',
+    description: 'Abre la tienda de tarjetas y cosméticos de arte de Plutus'
+};
+
+const dataTiendaPerfil = {
+    name: 'tiendaperfil',
+    description: 'Abre la tienda de perfil para comprar menús de autoroles'
+};
+
 const dataPerfil = { name: 'perfil', description: 'Abre tu armario de fondos, fuentes y tablas' };
 
 const dataCritica = {
@@ -291,8 +300,8 @@ const dataDelAuto = {
 
     try {
         const comandosTotales = [
-            dataComprar, dataPerfil, dataCritica, dataSetBg, 
-            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar, dataDelAuto
+        dataTiendaTarjetas, dataTiendaPerfil, dataPerfil, dataCritica, dataSetBg, 
+        dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar, dataDelAuto
         ];
 
         for (const [guildId, guild] of client.guilds.cache) {
