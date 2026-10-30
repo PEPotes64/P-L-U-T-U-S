@@ -806,7 +806,7 @@ client.on('interactionCreate', async interaction => {
                     return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP**.`, ephemeral: true });
                 }
 
-                                    const member = interaction.member;
+                                        const member = interaction.member;
 
                     // Si ya tiene exactamente ese rol puesto, se lo quitamos (comportamiento de toggle)
                     if (member.roles.cache.has(roleIdSeleccionado)) {
@@ -814,15 +814,24 @@ client.on('interactionCreate', async interaction => {
                         return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}> alv.`, ephemeral: true });
                     }
 
-                    // Extraemos todos los IDs de roles que pertenecen a este menú específico
-                    const rolesDelMenuIds = menuData.roles.map(r => r.roleId);
+                    // Si el menú actual es de colores, vamos a limpiar CUALQUIER OTRO rol de color que tenga en cualquier otro menú de colores
+                    if (menuData.nombreId.toLowerCase().includes('color')) {
+                        // Buscamos TODOS los menús de la base de datos que tengan "color" en su nombreId
+                        const menusDeColores = await AutoRoleMenu.find({ guildId: interaction.guildId, nombreId: { $regex: /color/i } });
+                        
+                        // Juntamos todos los IDs de roles de esos menús de colores
+                        let todosLosRolesDeColoresIds = [];
+                        menusDeColores.forEach(m => {
+                            m.roles.forEach(r => todosLosRolesDeColoresIds.push(r.roleId));
+                        });
 
-                    // Buscamos si el usuario ya tenía CUALQUIER OTRO rol de este mismo menú equipado
-                    const rolesAEliminar = member.roles.cache.filter(role => rolesDelMenuIds.includes(role.id));
+                        // Filtramos si el usuario ya tenía puesto alguno de esos roles de colores de cualquier menú
+                        const rolesColoresAEliminar = member.roles.cache.filter(role => todosLosRolesDeColoresIds.includes(role.id));
 
-                    // Si tenía otro rol del menú, se lo quitamos en chinga para reemplazarlo
-                    if (rolesAEliminar.size > 0) {
-                        await member.roles.remove(rolesAEliminar);
+                        // Si tenía un color de otro menú, se lo quitamos en chinga
+                        if (rolesColoresAEliminar.size > 0) {
+                            await member.roles.remove(rolesColoresAEliminar);
+                        }
                     }
 
                     // Cobramos XP si el menú tiene precio
@@ -837,7 +846,7 @@ client.on('interactionCreate', async interaction => {
                     // Le ponemos el nuevo rol seleccionado
                     await member.roles.add(roleIdSeleccionado);
 
-                    return await interaction.reply({ content: `✅ ¡Te has equipado el nuevo rol <@&${roleIdSeleccionado}> y se te reemplazó el anterior alv!`, ephemeral: true });
+                    return await interaction.reply({ content: `✅ ¡Te has equipado el nuevo rol <@&${roleIdSeleccionado}> y se te reemplazó el color anterior alv!`, ephemeral: true });
             }
 
             if (customId.startsWith('equipar_')) {
