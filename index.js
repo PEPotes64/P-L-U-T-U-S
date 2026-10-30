@@ -582,9 +582,11 @@ async function generarTarjetaCritica({
 
 // --- MANEJADOR UNIFICADO DE INTERACCIONES SLASH Y MENÚS ---
 client.on('interactionCreate', async interaction => {
+    if (interaction.isChatInputCommand()) {
+        console.log(`🚨 COMANDO EJECUTADO: /${interaction.commandName} por ${interaction.user.tag}`);
+    }
     try {
-        // 1. COMANDOS SLASH (/)
-        if (interaction.isChatInputCommand()) {
+        // El resto de tu código...
             const { commandName } = interaction;
 
             if (commandName === 'perfil') {
