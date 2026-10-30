@@ -324,7 +324,11 @@ async function generarTarjetaCritica({
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
     
-    const fontName = fuenteNombre ? fuenteNombre : 'sans-serif';
+    // 🛡️ BLINDAJE DE FUENTE: Si viene vacía o da error, usa sans-serif por defecto para que NUNCA falte el texto
+    let fontName = 'sans-serif';
+    if (fuenteNombre && fuenteNombre.trim() !== '' && fuenteNombre !== 'Ninguna' && fuenteNombre !== 'Predeterminada') {
+        fontName = fuenteNombre.trim();
+    }
     const fontMain = `"${fontName}", sans-serif`;
 
     const posFinal = Math.max(0, Math.min(100, positivoPct ?? 70));
