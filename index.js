@@ -324,12 +324,12 @@ async function generarTarjetaCritica({
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
     
-    // 🛡️ BLINDAJE DE FUENTE: Si viene vacía o da error, usa sans-serif por defecto para que NUNCA falte el texto
-    let fontName = 'sans-serif';
-    if (fuenteNombre && fuenteNombre.trim() !== '' && fuenteNombre !== 'Ninguna' && fuenteNombre !== 'Predeterminada') {
+        // Fuente por defecto oficial para todos los nuevos y sin fuente equipada
+    let fontName = 'PREDETERMINADA';
+    if (fuenteNombre && fuenteNombre.trim() !== '' && fuenteNombre !== 'sans-serif' && fuenteNombre !== 'Ninguna' && fuenteNombre !== 'Predeterminada') {
         fontName = fuenteNombre.trim();
     }
-    const fontMain = `"${fontName}", sans-serif`;
+    const fontMain = fontName;
 
     const posFinal = Math.max(0, Math.min(100, positivoPct ?? 70));
     const negativoPct = Math.max(0, Math.min(100, 100 - posFinal));
