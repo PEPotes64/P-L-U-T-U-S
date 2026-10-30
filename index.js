@@ -262,6 +262,14 @@ const dataLimpiar = {
     name: 'limpiar',
     description: 'Borra todas las fuentes y tablas de Mongo (Exclusivo Pepo)'
 };
+
+const dataDelAuto = {
+    name: 'delauto',
+    description: 'Borra un menú de autoroles de MongoDB (Exclusivo Pepo)',
+    options: [
+        { name: 'nombre', type: ApplicationCommandOptionType.String, description: 'Nombre ID del menú a borrar', required: true }
+    ]
+};
         client.once('ready', async () => {
     console.log(`Bot Plutus prendido como ${client.user.tag} > :v`);
 
@@ -284,7 +292,7 @@ const dataLimpiar = {
     try {
         const comandosTotales = [
             dataComprar, dataPerfil, dataCritica, dataSetBg, 
-            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar
+            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar, dataDelAuto
         ];
 
         for (const [guildId, guild] of client.guilds.cache) {
@@ -781,6 +789,24 @@ client.on('interactionCreate', async interaction => {
 
                 return await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
             }
+
+                        if (commandName === 'delauto') {
+                if (interaction.user.id !== PEPO_ID) {
+                    return await interaction.reply({ content: '❌ Este comando es exclusivo de mi creador Pepo alv.', ephemeral: true });
+                }
+
+                await interaction.deferReply({ ephemeral: true });
+                const nombreId = interaction.options.getString('nombre').toLowerCase().trim();
+                const guildId = interaction.guild.id;
+
+                const resultado = await AutoRoleMenu.findOneAndDelete({ guildId, nombreId });
+
+                if (!resultado) {
+                    return await interaction.editReply({ content: `❌ No se encontró ningún menú de autoroles con el nombre \`${nombreId}\` alv.` });
+                }
+
+                return await interaction.editReply({ content: `🗑️ ¡Menú de autorroles \`${nombreId}\` borrado con éxito de la base de datos alv Bv :v!` });
+                        }
         }
 
         // 2. MENÚS DESPLEGABLES (SELECT MENUS)
