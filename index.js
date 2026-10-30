@@ -728,7 +728,9 @@ client.on('interactionCreate', async interaction => {
             }
 
                         if (commandName === 'comprar') {
-                await interaction.deferReply({ ephemeral: true });
+    await interaction.reply({ content: 'Abriendo tienda alv...', ephemeral: true });
+    // y luego cargas las opciones y haces un editReply
+                        }
 
                 const guildId = interaction.guild.id;
 
