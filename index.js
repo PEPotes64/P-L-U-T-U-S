@@ -976,7 +976,7 @@ client.on('ready', () => {
 
 // --- AQUÍ MERITO PEGÁS EL EVENTO DE BIENVENIDA ---
 client.on('guildMemberAdd', async (member) => {
-    const canalId = '1447323114324103269';
+    const canalId = '1386439506072174652';
     const canalBienvenida = member.guild.channels.cache.get(canalId);
     
     if (!canalBienvenida) return;
