@@ -738,7 +738,18 @@ client.on('interactionCreate', async interaction => {
 
                 console.log("🔍 Menús de autorol encontrados en Mongo:", menusAutorol);
 
-                const opciones = [];
+                                const opciones = [];
+
+                // ¡Metemos los menus de autorol primero para q nunca se queden fuera del limite de 25!
+                menusAutorol.forEach(m => {
+                    opciones.push({ 
+                        label: `Menú Autorol: ${m.nombreId.toUpperCase()}`, 
+                        value: `comprar_autorol_${m.nombreId}`, 
+                        description: `Precio: ${m.precio ?? 0} XP | Roles: ${m.roles.length}`, 
+                        emoji: '✨' 
+                    });
+                });
+
                 fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`, value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`, emoji: '🖼️' }));
                 fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`, value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`, emoji: '🔤' }));
                 packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`, value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`, emoji: '📦' }));
