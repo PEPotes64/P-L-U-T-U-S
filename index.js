@@ -727,10 +727,10 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                                                if (commandName === 'comprar') {
+                        if (commandName === 'comprar') {
                 try {
                     if (!interaction.deferred && !interaction.replied) {
-                        await interaction.reply({ content: '🛒 Abriendo la tienda alv...', ephemeral: true });
+                        await interaction.deferReply({ ephemeral: true });
                     }
 
                     const guildId = interaction.guild.id;
@@ -743,25 +743,23 @@ client.on('interactionCreate', async interaction => {
                         AutoRoleMenu.find({ guildId })
                     ]);
 
-                    // LOG COMPLETO PARA VER QUÉ VERGAS TRAE CADA UNO A HUEVO
-                    console.log(`🔍 [TIENDA] Bgs: ${fondos.length}, Fuentes: ${fuentes.length}, Packs: ${packs.length}, Tablas: ${tablas.length}, Menús Autorol: ${menusAutorol.length}`);
-                    console.log("✨ Menús de autorol obtenidos:", JSON.stringify(menusAutorol, null, 2));
-
                     const opciones = [];
 
-                    // PRIORIDAD ABSOLUTA A LOS MENÚS DE AUTOROL
-                    menusAutorol.forEach(m => {
-                        const nombreLimpio = m.nombreId || 'desconocido';
-                        const precioMenu = m.precio ?? 0;
-                        const totalRoles = m.roles ? m.roles.length : 0;
+                    // FORZAR A QUE CUALQUIER MENÚ DE AUTOROL APAREZCA EN LA TIENDA
+                    if (menusAutorol && menusAutorol.length > 0) {
+                        menusAutorol.forEach(m => {
+                            const nombreLimpio = m.nombreId || 'desconocido';
+                            const precioMenu = m.precio ?? 0;
+                            const totalRoles = m.roles ? m.roles.length : 0;
 
-                        opciones.push({ 
-                            label: `Menú Autorol: ${nombreLimpio.toUpperCase()}`.substring(0, 25), 
-                            value: `comprar_autorol_${nombreLimpio}`, 
-                            description: `Precio: ${precioMenu} XP | Roles: ${totalRoles}`.substring(0, 50), 
-                            emoji: '✨' 
+                            opciones.push({ 
+                                label: `Menú: ${nombreLimpio.toUpperCase()}`.substring(0, 25), 
+                                value: `comprar_autorol_${nombreLimpio}`, 
+                                description: `Precio: ${precioMenu} XP | Roles: ${totalRoles}`.substring(0, 50), 
+                                emoji: '✨' 
+                            });
                         });
-                    });
+                    }
 
                     fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
                     fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
@@ -787,12 +785,15 @@ client.on('interactionCreate', async interaction => {
 
                 } catch (err) {
                     console.error("❌ Error interno en /comprar alv:", err);
-                    if (interaction.isRepliable() && !interaction.replied) {
-                        await interaction.reply({ content: '❌ Hubo un error al abrir la tienda alv.', ephemeral: true }).catch(() => {});
+                    if (interaction.isRepliable()) {
+                        if (interaction.deferred || interaction.replied) {
+                            await interaction.editReply({ content: '❌ Hubo un error al abrir la tienda alv.' }).catch(() => {});
+                        } else {
+                            await interaction.reply({ content: '❌ Hubo un error al abrir la tienda alv.', ephemeral: true }).catch(() => {});
+                        }
                     }
                 }
-                                                }
-            
+                        }
             
             if (commandName === 'autorol') {
     const guildId = interaction.guild.id;
