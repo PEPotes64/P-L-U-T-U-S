@@ -727,9 +727,8 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                                    if (commandName === 'comprar') {
+                                                if (commandName === 'comprar') {
                 try {
-                    // RESPUESTA INMEDIATA DE SEGURIDAD
                     if (!interaction.deferred && !interaction.replied) {
                         await interaction.reply({ content: '🛒 Abriendo la tienda alv...', ephemeral: true });
                     }
@@ -744,24 +743,30 @@ client.on('interactionCreate', async interaction => {
                         AutoRoleMenu.find({ guildId })
                     ]);
 
+                    // LOG COMPLETO PARA VER QUÉ VERGAS TRAE CADA UNO A HUEVO
                     console.log(`🔍 [TIENDA] Bgs: ${fondos.length}, Fuentes: ${fuentes.length}, Packs: ${packs.length}, Tablas: ${tablas.length}, Menús Autorol: ${menusAutorol.length}`);
+                    console.log("✨ Menús de autorol obtenidos:", JSON.stringify(menusAutorol, null, 2));
 
                     const opciones = [];
 
                     // PRIORIDAD ABSOLUTA A LOS MENÚS DE AUTOROL
                     menusAutorol.forEach(m => {
+                        const nombreLimpio = m.nombreId || 'desconocido';
+                        const precioMenu = m.precio ?? 0;
+                        const totalRoles = m.roles ? m.roles.length : 0;
+
                         opciones.push({ 
-                            label: `Menú Autorol: ${m.nombreId.toUpperCase()}`, 
-                            value: `comprar_autorol_${m.nombreId}`, 
-                            description: `Precio: ${m.precio ?? 0} XP | Roles: ${m.roles.length}`, 
+                            label: `Menú Autorol: ${nombreLimpio.toUpperCase()}`.substring(0, 25), 
+                            value: `comprar_autorol_${nombreLimpio}`, 
+                            description: `Precio: ${precioMenu} XP | Roles: ${totalRoles}`.substring(0, 50), 
                             emoji: '✨' 
                         });
                     });
 
-                    fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`, value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`, emoji: '🖼️' }));
-                    fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`, value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`, emoji: '🔤' }));
-                    packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`, value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`, emoji: '📦' }));
-                    tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`, value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`, emoji: '🪞' }));
+                    fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`.substring(0, 25), value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`.substring(0, 50), emoji: '🖼️' }));
+                    fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`.substring(0, 25), value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`.substring(0, 50), emoji: '🔤' }));
+                    packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`.substring(0, 25), value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`.substring(0, 50), emoji: '📦' }));
+                    tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`.substring(0, 25), value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`.substring(0, 50), emoji: '🪞' }));
 
                     if (opciones.length === 0) {
                         return await interaction.editReply({ content: '⚠️ La tienda está vacía todavía alv. Sube cosméticos o menús con precio.' });
@@ -786,7 +791,7 @@ client.on('interactionCreate', async interaction => {
                         await interaction.reply({ content: '❌ Hubo un error al abrir la tienda alv.', ephemeral: true }).catch(() => {});
                     }
                 }
-                                    }
+                                                }
             
             
             if (commandName === 'autorol') {
