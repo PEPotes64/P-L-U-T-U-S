@@ -728,54 +728,56 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply(`✅ ¡Menú de autorol \`${nombreId}\` creado con éxito con ${rolesArray.length} roles!\nTipo: ${tipoTexto}\nRoles: ${rolesArray.map(r => `<@&${r.roleId}>`).join(', ')}`);
             }
 
-                                                if (commandName === 'comprar') {
+                            if (commandName === 'comprar') {
                 try {
                     await interaction.deferReply({ ephemeral: true });
-                } catch (e) {
-                    return;
+
+                    const guildId = interaction.guild.id;
+
+                    const fondos = await Background.find({ guildId });
+                    const fuentes = await Font.find({ guildId });
+                    const packs = await Pack.find({ guildId });
+                    const tablas = await Tabla.find({ guildId });
+                    const menusAutorol = await AutoRoleMenu.find({ guildId });
+
+                    console.log("🔍 Menús de autorol encontrados en Mongo:", menusAutorol);
+
+                    const opciones = [];
+                    fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`, value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`, emoji: '🖼️' }));
+                    fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`, value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`, emoji: '🔤' }));
+                    packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`, value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`, emoji: '📦' }));
+                    tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`, value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`, emoji: '🪞' }));
+                    menusAutorol.forEach(m => opciones.push({ 
+                        label: `Menú Autorol: ${m.nombreId.toUpperCase()}`, 
+                        value: `comprar_autorol_${m.nombreId}`, 
+                        description: `Precio: ${m.precio ?? 0} XP | Roles: ${m.roles.length}`, 
+                        emoji: '✨' 
+                    }));
+
+                    if (opciones.length === 0) {
+                        return await interaction.editReply({ content: '⚠️ La tienda está vacía todavía alv.' });
+                    }
+
+                    const selectMenu = new StringSelectMenuBuilder()
+                        .setCustomId('tienda_menu')
+                        .setPlaceholder('🛒 Selecciona un artículo para comprar...')
+                        .addOptions(opciones.slice(0, 25));
+
+                    const row = new ActionRowBuilder().addComponents(selectMenu);
+                    const embed = new EmbedBuilder()
+                        .setColor('#FFD700')
+                        .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
+                        .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs, tablas y menús de autoroles exclusivos.');
+
+                    return await interaction.editReply({ embeds: [embed], components: [row] });
+
+                } catch (err) {
+                    console.error("❌ Error en el comando /comprar alv:", err);
+                    if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+                        await interaction.reply({ content: '❌ Hubo un error al abrir la tienda alv.', ephemeral: true }).catch(() => {});
+                    }
                 }
-
-                const guildId = interaction.guild.id;
-
-                const fondos = await Background.find({ guildId });
-                const fuentes = await Font.find({ guildId });
-                const packs = await Pack.find({ guildId });
-                const tablas = await Tabla.find({ guildId });
-                
-                // --- CAMBIO CLAVE: BUSCAMOS TODOS LOS MENÚS SIN FILTRAR ESTRICTAMENTE EL PRECIO PARA QUE APAREZCAN ---
-                const menusAutorol = await AutoRoleMenu.find({ guildId });
-
-                const opciones = [];
-                fondos.forEach(b => opciones.push({ label: `Fondo: ${b.nombreId}`, value: `comprar_bg_${b.nombreId}`, description: `Precio: ${b.precio ?? 0} XP`, emoji: '🖼️' }));
-                fuentes.forEach(f => opciones.push({ label: `Fuente: ${f.nombreId}`, value: `comprar_font_${f.nombreId}`, description: `Precio: ${f.precio ?? 0} XP`, emoji: '🔤' }));
-                packs.forEach(p => opciones.push({ label: `Pack: ${p.nombreId}`, value: `comprar_pack_${p.nombreId}`, description: `Precio: ${p.precio ?? 0} XP`, emoji: '📦' }));
-                tablas.forEach(t => opciones.push({ label: `Tabla: ${t.nombreId}`, value: `comprar_tabla_${t.nombreId}`, description: `Precio: ${t.precio ?? 0} XP`, emoji: '🪞' }));
-                
-                // Añadimos los menús a la tienda (si no tienen precio asignado, por defecto costarán 0 o lo que marque el documento)
-                menusAutorol.forEach(m => opciones.push({ 
-                    label: `Menú Autorol: ${m.nombreId.toUpperCase()}`, 
-                    value: `comprar_autorol_${m.nombreId}`, 
-                    description: `Precio: ${m.precio ?? 0} XP | Roles: ${m.roles.length}`, 
-                    emoji: '✨' 
-                }));
-
-                if (opciones.length === 0) {
-                    return await interaction.editReply({ content: '⚠️ La tienda está vacía todavía alv.' });
-                }
-
-                const selectMenu = new StringSelectMenuBuilder()
-                    .setCustomId('tienda_menu')
-                    .setPlaceholder('🛒 Selecciona un artículo para comprar...')
-                    .addOptions(opciones.slice(0, 25));
-
-                const row = new ActionRowBuilder().addComponents(selectMenu);
-                const embed = new EmbedBuilder()
-                    .setColor('#FFD700')
-                    .setTitle('🏛️ Tesorería y Tienda de Arte de Plutus')
-                    .setDescription('Gasta tu XP acumulada para comprar fondos, fuentes, packs, tablas y menús de autoroles exclusivos.');
-
-                return await interaction.editReply({ embeds: [embed], components: [row] });
-                                                }
+                            }
             
     
             if (commandName === 'autorol') {
