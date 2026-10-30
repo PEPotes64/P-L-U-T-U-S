@@ -806,18 +806,38 @@ client.on('interactionCreate', async interaction => {
                     return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP**.`, ephemeral: true });
                 }
 
-                const member = interaction.member;
-                if (member.roles.cache.has(roleIdSeleccionado)) {
-                    await member.roles.remove(roleIdSeleccionado);
-                    return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}>.`, ephemeral: true });
-                } else {
+                                    const member = interaction.member;
+
+                    // Si ya tiene exactamente ese rol puesto, se lo quitamos (comportamiento de toggle)
+                    if (member.roles.cache.has(roleIdSeleccionado)) {
+                        await member.roles.remove(roleIdSeleccionado);
+                        return await interaction.reply({ content: `❌ Te has **quitado** el rol <@&${roleIdSeleccionado}> alv.`, ephemeral: true });
+                    }
+
+                    // Extraemos todos los IDs de roles que pertenecen a este menú específico
+                    const rolesDelMenuIds = menuData.roles.map(r => r.roleId);
+
+                    // Buscamos si el usuario ya tenía CUALQUIER OTRO rol de este mismo menú equipado
+                    const rolesAEliminar = member.roles.cache.filter(role => rolesDelMenuIds.includes(role.id));
+
+                    // Si tenía otro rol del menú, se lo quitamos en chinga para reemplazarlo
+                    if (rolesAEliminar.size > 0) {
+                        await member.roles.remove(rolesAEliminar);
+                    }
+
+                    // Cobramos XP si el menú tiene precio
                     if (menuData.precio > 0) {
+                        if (userXpData.xp < menuData.precio) {
+                            return await interaction.reply({ content: `❌ No tienes suficiente XP. Necesitas **${menuData.precio} XP** alv.`, ephemeral: true });
+                        }
                         userXpData.xp -= menuData.precio;
                         await userXpData.save();
                     }
+
+                    // Le ponemos el nuevo rol seleccionado
                     await member.roles.add(roleIdSeleccionado);
-                    return await interaction.reply({ content: `✅ ¡Te has equipado el rol <@&${roleIdSeleccionado}> con éxito!`, ephemeral: true });
-                }
+
+                    return await interaction.reply({ content: `✅ ¡Te has equipado el nuevo rol <@&${roleIdSeleccionado}> y se te reemplazó el anterior alv!`, ephemeral: true });
             }
 
             if (customId.startsWith('equipar_')) {
