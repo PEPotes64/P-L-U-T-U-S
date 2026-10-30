@@ -673,13 +673,29 @@ client.on('interactionCreate', async interaction => {
             if (commandName === 'perfil') {
                 await interaction.deferReply({ ephemeral: true });
 
-                let userXpData = await UserXP.findOne({ userId, guildId });
+                                let userXpData = await UserXP.findOne({ userId, guildId });
+
+                // 🛡️ ASEGURAR FUENTE PREDETERMINADA DE CAJÓN
+                if (!userXpData) {
+                    userXpData = new UserXP({ 
+                        userId, 
+                        guildId, 
+                        xp: 0, 
+                        level: 1, 
+                        fuenteEquipada: 'PREDETERMINADA' 
+                    });
+                    await userXpData.save();
+                } else if (!userXpData.fuenteEquipada || userXpData.fuenteEquipada === 'sans-serif' || userXpData.fuenteEquipada === 'Ninguna') {
+                    userXpData.fuenteEquipada = 'PREDETERMINADA';
+                    await userXpData.save();
+                }
+
                 const nivelUsuario = userXpData ? userXpData.level : 1;
 
                 const bgsComprados = userXpData?.cartelesComprados || [];
-                const bgsGratisLvl = await Background.find({ guildId, precio: null, nivelMinimo: { $ne: null, $lte: nivelUsuario } });
+                const bgsGratislvl = await Background.find({ guildId, precio: null, nivelMinimo: { $lte: nivelUsuario } });
                 const bgsPredeterminados = await Background.find({ guildId, precio: null, nivelMinimo: null });
-                const nombresBgsGratis = [...bgsGratisLvl, ...bgsPredeterminados].map(b => b.nombreId);
+                const nombresBgsGratis = [...bgsGratislvl, ...bgsPredeterminados].map(b => b.nombreId);
                 const todosMisFondos = [...new Set([...nombresBgsGratis, ...bgsComprados])];
 
                 const fuentesCompradas = userXpData?.fuentesCompradas || [];
