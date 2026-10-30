@@ -1236,6 +1236,38 @@ client.on('interactionCreate', async interaction => {
 
                 return await interaction.editReply({ embeds: [embedPreview], files: [attachment], components: [botones] });
             }
+
+                        if (opcion.startsWith('comprar_autorol_')) {
+                const menuId = opcion.replace('comprar_autorol_', '');
+                const menuObj = await AutoRoleMenu.findOne({ guildId, nombreId: menuId });
+                if (!menuObj) return await interaction.editReply({ content: '❌ El menú de autorroles ya no existe alv.' });
+
+                if (userXpData.autorolesComprados && userXpData.autorolesComprados.includes(menuId)) {
+                    return await interaction.editReply({ content: '❌ Ya compraste este menú de autorroles anteriormente alv.' });
+                }
+
+                if (xpTotalActual < menuObj.precio) {
+                    return await interaction.editReply({ content: `❌ No tienes suficiente XP. Necesitas **${menuObj.precio} XP** (Tienes: ${xpTotalActual} XP).` });
+                }
+
+                const botones = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`exec_comprar_autorol_${menuId}`)
+                        .setLabel('🛒 Confirmar Compra de Menú')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('cancelar_compra')
+                        .setLabel('❌ Cancelar')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                const embedPreview = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle(`✨ Comprar Menú de Autoroles: ${menuId.toUpperCase()}`)
+                    .setDescription(`Desbloquea acceso completo a este menú de roles.\nPrecio: **${menuObj.precio} XP**\nTu XP Actual: **${xpTotalActual} XP**`);
+
+                return await interaction.editReply({ embeds: [embedPreview], components: [botones] });
+                        }
         }
 
         // --- EQUIPAR COSMÉTICOS DESDE EL PERFIL ---
@@ -1413,6 +1445,19 @@ client.on('interactionCreate', async interaction => {
                 await userXpData.save();
                 return await interaction.editReply({ content: `🪞 ¡Compra exitosa! Te compraste y equipaste la tabla **${itemId}** alv Bv :v.`, embeds: [], files: [], components: [] });
             }
+
+                        if (tipo === 'autorol') {
+                const menuObj = await AutoRoleMenu.findOne({ guildId, nombreId: itemId });
+                if (!menuObj || xpTotalActual < menuObj.precio) return await interaction.followUp({ content: '❌ Error: No tenés suficiente XP o el menú ya no existe.', ephemeral: true });
+
+                recalcularProgreso(userXpData, xpTotalActual - menuObj.precio);
+                if (!userXpData.autorolesComprados) userXpData.autorolesComprados = [];
+                if (!userXpData.autorolesComprados.includes(itemId)) userXpData.autorolesComprados.push(itemId);
+                await userXpData.save();
+
+                return await interaction.editReply({ content: `✨ ¡Compra exitosa! Compraste el menú de autorroles **${itemId}** alv Bv :v. Ya puedes usarlo en \`/autorol\`.`, embeds: [], files: [], components: [] });
+                        }
+            
         }
     } catch (err) {
         console.error("Error en botones de compra de Plutus:", err);
