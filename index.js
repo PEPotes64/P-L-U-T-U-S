@@ -68,6 +68,13 @@ const autoRoleMenuSchema = new mongoose.Schema({
 });
 const AutoRoleMenu = mongoose.models.AutoRoleMenu || mongoose.model('AutoRoleMenu', autoRoleMenuSchema);
 
+// --- MODELO PARA CONFIGURACIÓN DEL SERVIDOR (Fondo de carteles) ---
+const configSchema = new mongoose.Schema({
+    guildId: { type: String, required: true, unique: true },
+    fondoCartelUrl: { type: String, required: true }
+});
+const ServerConfig = mongoose.models.ServerConfig || mongoose.model('ServerConfig', configSchema);
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -854,7 +861,7 @@ client.on('interactionCreate', async interaction => {
                 return await interaction.editReply({ content: `🗑️ ¡Menú de autorroles \`${nombreId}\` borrado con éxito de la base de datos alv Bv :v!` });
             }
 
-                        if (commandName === 'setcard') {
+                                    if (commandName === 'setcard') {
                 if (interaction.user.id !== PEPO_ID) {
                     return await interaction.reply({ content: '❌ ¡Ni te flipes carnal! Este comando solo lo puede usar el buen Pepo alv Bv.', ephemeral: true });
                 }
@@ -867,22 +874,22 @@ client.on('interactionCreate', async interaction => {
 
                 await interaction.deferReply({ ephemeral: true });
 
-                const rutaDestino = './bienvenida_bg.png';
-                const fileStream = fs.createWriteStream(rutaDestino);
-                const https = require('https');
+                try {
+                    // Guardar o actualizar la URL en MongoDB
+                    await ServerConfig.findOneAndUpdate(
+                        { guildId: interaction.guild.id },
+                        { guildId: interaction.guild.id, fondoCartelUrl: attachment.url },
+                        { upsert: true, new: true }
+                    );
 
-                https.get(attachment.url, (response) => {
-                    response.pipe(fileStream);
-                    fileStream.on('finish', () => {
-                        fileStream.close();
-                        interaction.editReply({ content: '✅ ¡Fondo de los carteles actualizado exitosamente alv! Ya quedó listo para el próximo evento Bv :v.' });
+                    return await interaction.editReply({ 
+                        content: '✅ ¡Fondo de los carteles guardado exitosamente en MongoDB alv! Ya jamás se te va a borrar Bv :v.' 
                     });
-                }).on('error', (err) => {
-                    console.error('Error al descargar el fondo:', err);
-                    fs.unlink(rutaDestino, () => {});
-                    interaction.editReply({ content: '❌ Se cago la descarga de la imagen alv. Inténtalo de nuevo.' });
-                });
-                        }
+                } catch (err) {
+                    console.error('Error al guardar fondo en Mongo:', err);
+                    return await interaction.editReply({ content: '❌ Valio verga la conexión con MongoDB alv.' });
+                }
+                                    }
             
         }
 
@@ -1012,7 +1019,17 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-const { crearTarjeta } = require('./utils/cardCanvas'); // O como le hayas nombrado a tu archivo
+const { crearTarjeta } = require('./utils/cardCanvas');
+
+// Función aux para obtener la URL del fondo desde Mongo
+async function obtenerFondoUrl(guildId) {
+    try {
+        const config = await ServerConfig.findOne({ guildId });
+        return config ? config.fondoCartelUrl : null;
+    } catch (e) {
+        return null;
+    }
+}
 
 // 1. BIENVENIDA
 client.on('guildMemberAdd', async (member) => {
@@ -1021,7 +1038,8 @@ client.on('guildMemberAdd', async (member) => {
     if (!canal) return;
 
     try {
-        const tarjeta = await crearTarjeta(member, 'welcome');
+        const fondoUrl = await obtenerFondoUrl(member.guild.id);
+        const tarjeta = await crearTarjeta(member, 'welcome', fondoUrl);
         await canal.send({ content: `¡🔥Qué pedo ${member}! Pasa por el armario y elige un rol🔥`, files: [tarjeta] });
     } catch (error) {
         console.error('Error en bienvenida:', error);
@@ -1030,12 +1048,13 @@ client.on('guildMemberAdd', async (member) => {
 
 // 2. SALIDA (Despedida)
 client.on('guildMemberRemove', async (member) => {
-    const canalId = '1386439506072174652'; // Puede ser el mismo o uno distinto
+    const canalId = '1386439506072174652';
     const canal = member.guild.channels.cache.get(canalId);
     if (!canal) return;
 
     try {
-        const tarjeta = await crearTarjeta(member, 'goodbye');
+        const fondoUrl = await obtenerFondoUrl(member.guild.id);
+        const tarjeta = await crearTarjeta(member, 'goodbye', fondoUrl);
         await canal.send({ content: `El wey de ${member.user.tag} se largó del servidor por que se dio cuenta de lo mrd que era`, files: [tarjeta] });
     } catch (error) {
         console.error('Error en salida:', error);
@@ -1044,13 +1063,13 @@ client.on('guildMemberRemove', async (member) => {
 
 // 3. BANEO
 client.on('guildBanAdd', async (ban) => {
-    const canalId = '1386439506072174652'; // Canal de moderación o registros
+    const canalId = '1386439506072174652';
     const canal = ban.guild.channels.cache.get(canalId);
     if (!canal) return;
 
     try {
-        // En guildBanAdd el objeto es un ban, sacamos el user de ahí
-        const tarjeta = await crearTarjeta({ user: ban.user, guild: ban.guild }, 'ban');
+        const fondoUrl = await obtenerFondoUrl(ban.guild.id);
+        const tarjeta = await crearTarjeta({ user: ban.user, guild: ban.guild }, 'ban', fondoUrl);
         await canal.send({ content: `A ${ban.user.tag} le aplicaron la de gipmao por idiota xdd`, files: [tarjeta] });
     } catch (error) {
         console.error('Error en baneo:', error);
