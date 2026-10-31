@@ -50,6 +50,18 @@ async function crearTarjeta(member, tipo = 'welcome', fondoUrl = null) {
     ctx.drawImage(avatar, x, y, radius * 2, radius * 2);
     ctx.restore();
 
+        // --- CUADRO SEMITRANSPARENTE PARA EL TEXTO ---
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)'; // Fondo oscuro para contraste
+    ctx.beginPath();
+    ctx.roundRect(280, 175, 680, 160, 16); // Posición, tamaño y esquinas redondeadas
+    ctx.fill();
+    
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // Un borde sutil elegante
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
     // Textos
     const textX = 300;
 
