@@ -1,25 +1,30 @@
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const { AttachmentBuilder } = require('discord.js');
-const fs = require('fs');
 
-async function crearTarjeta(member, tipo = 'welcome') {
+async function crearTarjeta(member, tipo = 'welcome', fondoUrl = null) {
     const canvas = createCanvas(1000, 562);
     const ctx = canvas.getContext('2d');
 
-    const path = require('path');
+    let fondoCargado = false;
 
-// Esto arma la ruta absoluta exacta apuntando a la raíz sin pedos de subcarpetas
-const rutaFondo = path.join(__dirname, '../bienvenida_bg.png');
+    // Intentar cargar la imagen si viene URL de MongoDB
+    if (fondoUrl) {
+        try {
+            const background = await loadImage(fondoUrl);
+            ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+            fondoCargado = true;
+        } catch (e) {
+            console.error('⚠️ Error al cargar el fondo desde URL de Mongo:', e.message);
+        }
+    }
 
-    if (fs.existsSync(rutaFondo)) {
-        const background = await loadImage(rutaFondo);
-        ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-    } else {
+    // Fondo por defecto si no hay URL o si falla
+    if (!fondoCargado) {
         ctx.fillStyle = '#1e1e2f';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Capa oscura con un tinte rojizo si es baneo para darle más drama alv :v
+    // Capa con tinte transparente según evento
     if (tipo === 'ban') {
         ctx.fillStyle = 'rgba(100, 0, 0, 0.5)';
     } else if (tipo === 'goodbye') {
@@ -29,7 +34,7 @@ const rutaFondo = path.join(__dirname, '../bienvenida_bg.png');
     }
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Avatar del usuario
+    // Avatar
     const avatarURL = member.user.displayAvatarURL({ extension: 'png', size: 256 });
     const avatar = await loadImage(avatarURL);
 
@@ -45,12 +50,12 @@ const rutaFondo = path.join(__dirname, '../bienvenida_bg.png');
     ctx.drawImage(avatar, x, y, radius * 2, radius * 2);
     ctx.restore();
 
-    // Textos dinámicos según el evento
-        const textX = 300; // Ajustamos un cacho a la izquierda
+    // Textos
+    const textX = 300;
 
     if (tipo === 'welcome') {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 26px sans-serif'; // Letra más chica para que quepa
+        ctx.font = 'bold 26px sans-serif';
         ctx.fillText('¡BIENVENIDO, AHORA ERES UN PANA!', textX, 215);
 
         ctx.fillStyle = '#ffaa00';
