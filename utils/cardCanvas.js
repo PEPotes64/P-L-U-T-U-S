@@ -101,4 +101,10 @@ async function crearTarjeta(member, tipo = 'welcome', fondoUrl = null) {
         ctx.font = '18px sans-serif';
         ctx.fillText('Se lo llevó la verga por infractor alv', textX, 300);
     }
+
+        return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `${tipo}.png` });
+}
+
+module.exports = { crearTarjeta };
+
     
