@@ -43,42 +43,44 @@ async function crearTarjeta(member, tipo = 'welcome') {
     ctx.restore();
 
     // Textos dinámicos según el evento
+        const textX = 300; // Ajustamos un cacho a la izquierda
+
     if (tipo === 'welcome') {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 35px sans-serif';
-        ctx.fillText('¡BIENVENIDO, AHORA ERES UN PANA!', 280, 220);
+        ctx.font = 'bold 26px sans-serif'; // Letra más chica para que quepa
+        ctx.fillText('¡BIENVENIDO, AHORA ERES UN PANA!', textX, 215);
 
         ctx.fillStyle = '#ffaa00';
-        ctx.font = 'bold 45px sans-serif';
-        ctx.fillText(member.user.username.toUpperCase(), 280, 280);
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText(member.user.username.toUpperCase(), textX, 260);
 
         ctx.fillStyle = '#dddddd';
-        ctx.font = '22px sans-serif';
-        ctx.fillText(`Eres el miembro número #${member.guild.memberCount}`, 280, 330);
+        ctx.font = '18px sans-serif';
+        ctx.fillText(`Eres el miembro número #${member.guild.memberCount}`, textX, 300);
     } else if (tipo === 'goodbye') {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 35px sans-serif';
-        ctx.fillText('HA SIDO UN DISGUSTO...', 280, 220);
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillText('HA SIDO UN DISGUSTO...', textX, 215);
 
         ctx.fillStyle = '#ff5555';
-        ctx.font = 'bold 45px sans-serif';
-        ctx.fillText(member.user.username.toUpperCase(), 280, 280);
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText(member.user.username.toUpperCase(), textX, 260);
 
         ctx.fillStyle = '#dddddd';
-        ctx.font = '22px sans-serif';
-        ctx.fillText('Se fue alv', 280, 330);
+        ctx.font = '18px sans-serif';
+        ctx.fillText('Se fue alv', textX, 300);
     } else if (tipo === 'ban') {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 35px sans-serif';
-        ctx.fillText('USUARIO VIOLADO', 280, 220);
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillText('USUARIO BANEADO', textX, 215);
 
         ctx.fillStyle = '#ff0000';
-        ctx.font = 'bold 45px sans-serif';
-        ctx.fillText(member.user.username.toUpperCase(), 280, 280);
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText(member.user.username.toUpperCase(), textX, 260);
 
         ctx.fillStyle = '#dddddd';
-        ctx.font = '22px sans-serif';
-        ctx.fillText('El staff te metio la verga por pendejo cfff', 280, 330);
+        ctx.font = '18px sans-serif';
+        ctx.fillText('Se lo llevó la verga por infractor alv', textX, 300);
     }
 
     return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `${tipo}.png` });
