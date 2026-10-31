@@ -6,7 +6,7 @@ async function crearTarjeta(member, tipo = 'welcome') {
     const canvas = createCanvas(1000, 562);
     const ctx = canvas.getContext('2d');
 
-    const rutaFondo = './assets/bienvenida_bg.png';
+    const rutaFondo = '../bienvenida_bg.png';
 
     if (fs.existsSync(rutaFondo)) {
         const background = await loadImage(rutaFondo);
