@@ -6,7 +6,10 @@ async function crearTarjeta(member, tipo = 'welcome') {
     const canvas = createCanvas(1000, 562);
     const ctx = canvas.getContext('2d');
 
-    const rutaFondo = '../bienvenida_bg.png';
+    const path = require('path');
+
+// Esto arma la ruta absoluta exacta apuntando a la raíz sin pedos de subcarpetas
+const rutaFondo = path.join(__dirname, '../bienvenida_bg.png');
 
     if (fs.existsSync(rutaFondo)) {
         const background = await loadImage(rutaFondo);
