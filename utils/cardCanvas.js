@@ -50,24 +50,23 @@ async function crearTarjeta(member, tipo = 'welcome', fondoUrl = null) {
     ctx.drawImage(avatar, x, y, radius * 2, radius * 2);
     ctx.restore();
 
-        // --- CUADRO SEMITRANSPARENTE PARA EL TEXTO ---
+            // --- CUADRO SEMITRANSPARENTE PARA EL TEXTO ---
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)'; // Fondo oscuro para contraste
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)'; // Fondo oscuro para contraste chido
     ctx.beginPath();
-    ctx.roundRect(280, 175, 680, 160, 16); // Posición, tamaño y esquinas redondeadas
+    ctx.roundRect(280, 175, 680, 160, 16); // Posición y esquinas redondeadas
     ctx.fill();
     
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // Un borde sutil elegante
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // Borde elegante
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.restore();
 
-    // Textos
     const textX = 300;
 
     if (tipo === 'welcome') {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 26px sans-serif';
+        ctx.font = 'bold 26px sans-serif'; // Fuente simple y legible alv
         ctx.fillText('¡BIENVENIDO, AHORA ERES UN PANA!', textX, 215);
 
         ctx.fillStyle = '#ffaa00';
@@ -102,8 +101,4 @@ async function crearTarjeta(member, tipo = 'welcome', fondoUrl = null) {
         ctx.font = '18px sans-serif';
         ctx.fillText('Se lo llevó la verga por infractor alv', textX, 300);
     }
-
-    return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `${tipo}.png` });
-}
-
-module.exports = { crearTarjeta };
+    
