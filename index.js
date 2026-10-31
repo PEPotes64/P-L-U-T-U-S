@@ -1033,7 +1033,7 @@ async function obtenerFondoUrl(guildId) {
 
 // 1. BIENVENIDA
 client.on('guildMemberAdd', async (member) => {
-    const canalId = '1386439506072174652';
+    const canalId = '1447323114324103269';
     const canal = member.guild.channels.cache.get(canalId);
     if (!canal) return;
 
@@ -1048,14 +1048,14 @@ client.on('guildMemberAdd', async (member) => {
 
 // 2. SALIDA (Despedida)
 client.on('guildMemberRemove', async (member) => {
-    const canalId = '1386439506072174652';
+    const canalId = '1447323114324103269';
     const canal = member.guild.channels.cache.get(canalId);
     if (!canal) return;
 
     try {
         const fondoUrl = await obtenerFondoUrl(member.guild.id);
         const tarjeta = await crearTarjeta(member, 'goodbye', fondoUrl);
-        await canal.send({ content: `El wey de ${member.user.tag} se largó del servidor por que se dio cuenta de lo mrd que era`, files: [tarjeta] });
+        await canal.send({ content: `🥀El wey de ${member.user.tag} se largó del servidor por que se dio cuenta de lo mrd que era🥀`, files: [tarjeta] });
     } catch (error) {
         console.error('Error en salida:', error);
     }
@@ -1063,14 +1063,14 @@ client.on('guildMemberRemove', async (member) => {
 
 // 3. BANEO
 client.on('guildBanAdd', async (ban) => {
-    const canalId = '1386439506072174652';
+    const canalId = '1447323114324103269';
     const canal = ban.guild.channels.cache.get(canalId);
     if (!canal) return;
 
     try {
         const fondoUrl = await obtenerFondoUrl(ban.guild.id);
         const tarjeta = await crearTarjeta({ user: ban.user, guild: ban.guild }, 'ban', fondoUrl);
-        await canal.send({ content: `A ${ban.user.tag} le aplicaron la de gipmao por idiota xdd`, files: [tarjeta] });
+        await canal.send({ content: `💕A ${ban.user.tag} le aplicaron la de gipmao por idiota xdd💕`, files: [tarjeta] });
     } catch (error) {
         console.error('Error en baneo:', error);
     }
