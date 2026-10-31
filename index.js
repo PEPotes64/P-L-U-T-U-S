@@ -23,6 +23,7 @@ const {
 
 const mongoose = require('mongoose');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+const fs = require('fs');
 require('dotenv').config();
 
 const UserXP = require('./UserXP.js');
