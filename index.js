@@ -271,6 +271,19 @@ const dataDelAuto = {
     ]
 };
 
+const dataSetCard = {
+    name: 'setcard',
+    description: 'Cambia el fondo de los carteles del servidor alv (Exclusivo Pepo)',
+    options: [
+        {
+            name: 'fondo',
+            type: ApplicationCommandOptionType.Attachment,
+            description: 'Sube la nueva imagen de fondo (PNG o JPG)',
+            required: true
+        }
+    ]
+};
+
 client.once('ready', async () => {
     console.log(`Bot Plutus prendido como ${client.user.tag} > :v`);
 
@@ -293,7 +306,7 @@ client.once('ready', async () => {
     try {
         const comandosTotales = [
             dataComprar, dataTiendaPerfil, dataPerfil, dataCritica, dataSetBg, 
-            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar, dataDelAuto
+            dataDelBg, dataSetFont, dataSetPack, dataTabla, dataSetAuto, dataAutorol, dataLimpiar, dataDelAuto, dataSetCard
         ];
 
         for (const [guildId, guild] of client.guilds.cache) {
@@ -840,6 +853,37 @@ client.on('interactionCreate', async interaction => {
 
                 return await interaction.editReply({ content: `🗑️ ¡Menú de autorroles \`${nombreId}\` borrado con éxito de la base de datos alv Bv :v!` });
             }
+
+                        if (commandName === 'setcard') {
+                if (interaction.user.id !== PEPO_ID) {
+                    return await interaction.reply({ content: '❌ ¡Ni te flipes carnal! Este comando solo lo puede usar el buen Pepo alv Bv.', ephemeral: true });
+                }
+
+                const attachment = interaction.options.getAttachment('fondo');
+
+                if (!attachment.contentType || !attachment.contentType.startsWith('image/')) {
+                    return await interaction.reply({ content: '❌ ¡Sube una pinche imagen válida (PNG o JPG), burro alv!', ephemeral: true });
+                }
+
+                await interaction.deferReply({ ephemeral: true });
+
+                const rutaDestino = './bienvenida_bg.png';
+                const fileStream = fs.createWriteStream(rutaDestino);
+                const https = require('https');
+
+                https.get(attachment.url, (response) => {
+                    response.pipe(fileStream);
+                    fileStream.on('finish', () => {
+                        fileStream.close();
+                        interaction.editReply({ content: '✅ ¡Fondo de los carteles actualizado exitosamente alv! Ya quedó listo para el próximo evento Bv :v.' });
+                    });
+                }).on('error', (err) => {
+                    console.error('Error al descargar el fondo:', err);
+                    fs.unlink(rutaDestino, () => {});
+                    interaction.editReply({ content: '❌ Se cago la descarga de la imagen alv. Inténtalo de nuevo.' });
+                });
+                        }
+            
         }
 
         // 2. MENÚS DESPLEGABLES (SELECT MENUS)
